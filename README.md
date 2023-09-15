@@ -5,7 +5,7 @@ These scripts will run liftoff, fix the problem with missing phase information a
 
 ### `run-liftoff.sh`
 
-Run one instance of liftoff with deafault parameters and `-polish`. Add it to a loop and run it as many times as you want.
+Run one instance of liftoff with default parameters and `-polish`. Add it to a loop and run it as many times as you want.
 
 **Usage:**
 ```
@@ -18,7 +18,7 @@ bash run-liftoff.sh target_genome.fasta reference_genome.fasta reference_gff.gff
 #
 ### `run-and-optimise-liftoff.py`
 
-Automate running liftoff with different `-flank` and `-distance` parameters to get the fewest unmapped gene models.
+Automate running liftoff with different `-flank` and `-distance` parameters to get the fewest unmapped features.
 
 **Usage:**
 ```
