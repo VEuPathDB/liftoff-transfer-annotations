@@ -13,7 +13,7 @@ bash run-liftoff.sh target_genome.fasta reference_genome.fasta reference_gff.gff
 ```
 **Output:**
 
-Standard [Liftoff output](https://github.com/agshumate/Liftoff#output)
+- Standard [Liftoff output](https://github.com/agshumate/Liftoff#output)
 
 #
 ### `run-and-optimise-liftoff.py`
@@ -38,7 +38,7 @@ optional arguments:
 ```
 **Output:**
 
-Standard [Liftoff output](https://github.com/agshumate/Liftoff#output)
+- Standard [Liftoff output](https://github.com/agshumate/Liftoff#output)
 
 `[Old_Genome_name]-to-[New_Genome_name]-UNMAPPED-FEATURE-COUNTS.csv` - summary of the number of unmapped features for each level of flank tested
 
@@ -68,7 +68,7 @@ optional arguments:
                         A genome fasta file that corresponds to the liftoff gff
 ```
 **Output:**
-`liftoff-gff-name_APOLLO.gff` - A gff format annotation file
+- `liftoff-gff-name_APOLLO.gff` - A gff format annotation file
 
 
 #
@@ -87,7 +87,7 @@ optional arguments:
 ```
 **Output:**
 
-`your-gff-name-PHASE-CORRECTED.gff` - A gff format annotation file
+- `your-gff-name-PHASE-CORRECTED.gff` - A gff format annotation file
 
 #
 ### `gff_indexer.py`
@@ -104,7 +104,7 @@ optional arguments:
 ```
 **Output:**
 
-`your-gff-name_indexed.gff` - A gff format annotation file
+- `your-gff-name_indexed.gff` - A gff format annotation file
 
 #
 ### `gff_protein_change_finder.py`
@@ -132,23 +132,23 @@ optional arguments:
 ```
 **Output:**
 
-`your-output-name-missing_cds_lists.npy` - a python dictionary of gene models with the following changes:
-- _'nucl_change'_, additions/deletions to their nucleotide length 
-- _'missing_start'_, missing CDS at the start
-- _'missing_middle'_, missing CDS at the middle
-- _'missing_end'_, missing CDS at the end of the gene model
+- `your-output-name-missing_cds_lists.npy` - a python dictionary of gene models with the following changes:
+  - _'nucl_change'_, additions/deletions to their nucleotide length 
+  - _'missing_start'_, missing CDS at the start
+  - _'missing_middle'_, missing CDS at the middle
+  - _'missing_end'_, missing CDS at the end of the gene model
 
-`your-output-name-STATS.csv` - a comma delimited table with the following information:
-- _ID_, The unique CDS ID
-- _strand_match_, whether both compared sequences are on the same strand
-- _nucl_old_length_, nucleotide sequence length for the original gff
-- _nucl_new_length_, nucleotide sequence length for the new gff
-- _nucl_length_diff_, difference in nucleotide sequence length
-- _nucl_levenshtein_ratio_, nucleotide sequence similarity calculated with [fuzzywuzzy](https://pypi.org/project/fuzzywuzzy/) sequence matching with levenshtein ratio
-- _nucl_score_, nucleotide sequence alignment score using BLOSUM62
-- _aa_old_length_, amino acid sequence length for the original gff
-- _aa_new_length_, amino acid sequence length for the new gff
-- _aa_length_diff_, amino acid in nucleotide sequence length
-- _aa_levenshtein_ratio_, amino acid sequence similarity calculated with [fuzzywuzzy](https://pypi.org/project/fuzzywuzzy/) sequence matching with levenshtein ratio
-- _aa_score_, amino acid sequence alignment score using BLOSUM62
+- `your-output-name-STATS.csv` - a comma delimited table with the following information:
+  - _ID_, The unique CDS ID
+  - _strand_match_, whether both compared sequences are on the same strand
+  - _nucl_old_length_, nucleotide sequence length for the original gff
+  - _nucl_new_length_, nucleotide sequence length for the new gff
+  - _nucl_length_diff_, difference in nucleotide sequence length
+  - _nucl_levenshtein_ratio_, nucleotide sequence similarity calculated with [fuzzywuzzy](https://pypi.org/project/fuzzywuzzy/) sequence matching with levenshtein ratio
+  - _nucl_score_, nucleotide sequence alignment score using BLOSUM62
+  - _aa_old_length_, amino acid sequence length for the original gff
+  - _aa_new_length_, amino acid sequence length for the new gff
+  - _aa_length_diff_, amino acid in nucleotide sequence length
+  - _aa_levenshtein_ratio_, amino acid sequence similarity calculated with [fuzzywuzzy](https://pypi.org/project/fuzzywuzzy/) sequence matching with levenshtein ratio
+  - _aa_score_, amino acid sequence alignment score using BLOSUM62
 
