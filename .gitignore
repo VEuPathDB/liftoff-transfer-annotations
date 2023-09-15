@@ -1,0 +1,12 @@
+OLD-Finding-open-reading-frames.py
+CimexlectulariusHarlanAnnotationTransfer.gff_polished.gff
+CimexlectulariusHarlanAnnotationTransfer.gff_polished.gff_new.gff
+COPY_CimexlectulariusHarlanAnnotationTransfer.gff_polished.gff
+test.gff
+test.gff_new.gff
+test_fasta.fasta
+test_gff_2.gff
+test_gff_2.gff_new.gff
+Finding-open-reading-frames.py
+VectorBase-62_ClectulariusHarlan_Genome.fasta
+Benchmarking.ipynb
