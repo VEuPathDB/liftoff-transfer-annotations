@@ -112,7 +112,9 @@ def write_apollo_gff(liftoff_gff, genome_fasta):
                     attr_dict = dict(pairs)
 
                     # remove unnecessary attributes. 
-                    liftoff_keys = ['coverage', 'sequence_ID', 'valid_ORFs', 'extra_copy_number', 'copy_num_ID']
+                    liftoff_keys = ['coverage', 'sequence_ID', 'valid_ORFs', 'extra_copy_number', 'copy_num_ID', \
+                                    'valid_ORF', 'matches_ref_protein', 'missing_start_codon', 'missing_stop_codon'\
+                                    'inframe_stop_codon']
                     for key in liftoff_keys:
                         attr_dict.pop(key, None)
 

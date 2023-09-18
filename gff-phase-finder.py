@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 import csv
+import argparse
 
 def progress_bar(progress, total):
     percent = (100*progress/float(total))
@@ -78,7 +79,7 @@ def find_phase(df, parents):
 
 # need to -1 from all of column for the negative row (check the positive), so that it is phase rather than the number of needed bases
 
-def write_gff(liftoff_gff, df):
+def write_gff(liftoff_gff, df, comments):
     f = open(liftoff_gff+"-PHASE-CORRECTED.gff", 'a', newline='')
     for i in comments:
         f.write(str(i[0])+"\n")
@@ -86,9 +87,27 @@ def write_gff(liftoff_gff, df):
     f.close()
     return
 
+def main():
+    parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter,
+     description='''
+        Calculates GFF phase information for CDS which lack it. 
+        -------------------------------------------------------
+        This was made for liftoff gff outputs which lack this information.
+        GFF phase is not the same as reading frame! Please see the documentation:
+        https://github.com/The-Sequence-Ontology/Specifications/blob/master/gff3.md''',
+        epilog="written by Helen R. Davison")
+    parser.add_argument('-gff', '--liftoff_gff', \
+                        help="The gff without phase information (made for liftoff)",
+                        required=True)
+    args = parser.parse_args()
+    # Name the inputs
+    liftoff_gff = args.gff()
 
-df, parents, comments = read_in_gff(liftoff_gff)
-print("\033[32m {}\033[0;0m".format("Done!"))
+    # Run the scripts
+    df, parents, comments = read_in_gff(liftoff_gff)
+    print("\033[32m {}\033[0;0m".format("Done!"))
+    find_phase(df, parents, comments)
+    write_gff(liftoff_gff, df)
+    return
 
-find_phase(df, parents)
-write_gff(liftoff_gff, df)
+main()
