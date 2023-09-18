@@ -1,6 +1,13 @@
 # Transfer annotations
 These scripts will run liftoff, fix the problem with missing phase information and then evaluate the differences in protein and nucleotide sequence between the original gff and the liftoff transferred gff.
 
+**The reccomended pipeline is:**
+1. `run-and-optimise-liftoff.py`
+2. Retrieve the liftoff with lowest flank number and the fewest missing features
+3. `liftoff2apollo.py`
+4. `gff-phase-finder.py`
+5. `gff_protein_change_finder.py`
+
 ## The scripts
 
 ### `run-liftoff.sh`
