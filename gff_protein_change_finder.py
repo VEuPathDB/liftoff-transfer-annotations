@@ -163,6 +163,7 @@ def get_stats(old_gff_df, match_stats, name):
     df = pd.DataFrame(match_stats[1:], columns=match_stats[0])
     df['CDS_number'] = pd.to_numeric(df.loc[:,'ID'].str.split('-CDS', expand=True)[1])
     df['gene_id'] = df.loc[:,'ID'].str.split('-CDS', expand=True)[0]
+    df.to_csv(str(name)+"-STATS.csv", sep=',',index=None, na_rep=np.NaN)
     ## calculations
     first = (df.sort_values(['gene_id','CDS_number']).groupby('gene_id').first()['CDS_number'] != 1).reset_index()
     ## the stats to keep
@@ -177,8 +178,8 @@ def get_stats(old_gff_df, match_stats, name):
     print(str(len(missing_middle))+" out of "+str(len(df['gene_id'].unique())) + " protein coding sequences have a missing middle codon")
     print(str(len(missing_end))+" out of "+str(len(df['gene_id'].unique())) + " protein coding sequences have a missing end codon")
     differences = {"changed_nucl":changed_nucl, "missing_start":missing_start, "missing_middle":missing_middle, "missing_end":missing_end}
-    venny4py(sets=differences, ext='svg')
-    os.rename("Venn_4.svg", name+"_venn.svg")
+    np.save(name+'-missing_cds_lists.npy',differences)
+    venny4py(sets=differences, out = name+"_venn", ext='svg')
     return differences, df
 
 @timer_func
@@ -280,8 +281,6 @@ def main():
     match_stats = get_matching_genes(matching, old_gff_df, new_gff_df, old_genome, new_genome)
     print(str(len(absent))+ " ids out of a total of "+str(len(matching)+len(absent)) + " did not have a match in the new gff.")
     differences, stats_df = get_stats(old_gff_df, match_stats, name)
-    np.save(name+'missing_cds_lists.npy',differences)
-    stats_df.to_csv(str(name)+"-STATS.csv", sep=',',index=None, na_rep=np.NaN)
 
     #for item in list(stats_df['gene_id']):
     #    if item not in list(new_gff_df.loc[new_gff_df[2]=='CDS']['Parent']):

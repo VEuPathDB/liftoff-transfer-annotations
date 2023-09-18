@@ -41,7 +41,7 @@ def read_in_gff(liftoff_gff):
     return df, parents, comments #,valid_genes
 
 
-def find_phase(df, parents):
+def find_phase(df, parents, comments):
     print("\033[32m {}\033[0;0m".format("Finding phase. This might take a hot minute..."))
     for index, name in enumerate(list(parents)):
         start = []
@@ -96,18 +96,19 @@ def main():
         GFF phase is not the same as reading frame! Please see the documentation:
         https://github.com/The-Sequence-Ontology/Specifications/blob/master/gff3.md''',
         epilog="written by Helen R. Davison")
-    parser.add_argument('-gff', '--liftoff_gff', \
-                        help="The gff without phase information (made for liftoff)",
+    parser.add_argument('-gff', '--liftoff_gff', dest="liftoff_gff",\
+                        type=argparse.FileType('r'), help="The gff without phase information (made for liftoff)",
                         required=True)
     args = parser.parse_args()
     # Name the inputs
-    liftoff_gff = args.gff()
+    liftoff_gff = args.liftoff_gff.name
+
 
     # Run the scripts
     df, parents, comments = read_in_gff(liftoff_gff)
     print("\033[32m {}\033[0;0m".format("Done!"))
     find_phase(df, parents, comments)
-    write_gff(liftoff_gff, df)
+    write_gff(liftoff_gff, df, comments)
     return
 
 main()
