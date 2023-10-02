@@ -21,3 +21,4 @@ test-files/*
 .vscode/launch.json
 check_coordinates_are_identical.py
 An_funestus/*
+Coccidioides_silveira/*

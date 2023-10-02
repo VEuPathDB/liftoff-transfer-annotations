@@ -178,7 +178,12 @@ def get_stats(old_gff_df, match_stats, name):
     print(str(len(missing_middle))+" out of "+str(len(df['gene_id'].unique())) + " protein coding sequences have a missing middle codon")
     print(str(len(missing_end))+" out of "+str(len(df['gene_id'].unique())) + " protein coding sequences have a missing end codon")
     differences = {"changed_nucl":changed_nucl, "missing_start":missing_start, "missing_middle":missing_middle, "missing_end":missing_end}
-    np.save(name+'-missing_cds_lists.npy',differences)
+    a = pd.DataFrame(differences['changed_nucl'], columns=['changed_nucl'])
+    b = pd.DataFrame(differences['missing_start'], columns=['missing_start'])
+    c = pd.DataFrame(differences['missing_middle'], columns=['missing_middle'])
+    d = pd.DataFrame(differences['missing_end'], columns=['missing_end'])
+    differences = a.join(b, how='outer').join(c, how='outer').join(d, how='outer')
+    df.to_csv(name+'-missing-cds-list.csv', index=None, header=True)
     venny4py(sets=differences, out = name+"_venn", ext='svg')
     return differences, df
 
