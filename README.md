@@ -159,3 +159,36 @@ optional arguments:
   - _aa_levenshtein_ratio_, amino acid sequence similarity calculated with [fuzzywuzzy](https://pypi.org/project/fuzzywuzzy/) sequence matching with levenshtein ratio
   - _aa_score_, amino acid sequence alignment score using BLOSUM62
 
+#
+### `find-reciprocal-best-hits.py` 
+Calculate reciprocal best hits and make some nice histograms and density plots
+Based on code from [here](https://widdowquinn.github.io/2018-03-06-ibioic/02-sequence_databases/05-blast_for_rbh.html)
+
+**Usage:**
+```
+find-reciprocal-best-hits.py [-h] -s1 QUERY_AA -s2 SUBJECT_AA -o OUTPUT
+
+optional arguments:
+  -h, --help    show this help message and exit
+  -s1 QUERY_AA, --query_aa QUERY_AA   
+                one set of aa sequence
+  -s2 SUBJECT_AA, --subject_aa SUBJECT_AA    
+                second set of aa sequence
+  -o OUTPUT, --output OUTPUT    
+                Name for outputs
+```
+**Output:**
+Blast results for forward and reverse reads:
+`outputName-fwd-results.tab`
+`outputName-rev-results.tab`
+
+Reciprocal best hits:
+`Cposadasi-test-rbbh.csv`
+
+histograms of normalised bitscores for forward, reverse and reciprocal reads:
+![Forward and reverse normalised bitscores histogram](images-for-git/Cposadasi-test_norm_bitscores_histograms.png)
+![RBH normalised bitscores histogram](images-for-git/Cposadasi-test_norm_bitscores_histograms.png)
+
+2D density plots of normalised bitscores for forward, reverse and reciprocal reads
+![Forward and reverse normalised bitscores 2D density](images-for-git/Cposadasi-test_norm_bitscores_histograms.png)
+![RBH normalised bitscores 2D density](images-for-git/Cposadasi-test_norm_bitscores_histograms.png)

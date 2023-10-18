@@ -22,3 +22,7 @@ test-files/*
 check_coordinates_are_identical.py
 An_funestus/*
 Coccidioides_silveira/*
+Cposadasi-test-RBH-results/*
+Leishmania-major-to-mexicana/*
+runRBLAST.sh
+An_gambiae/*
