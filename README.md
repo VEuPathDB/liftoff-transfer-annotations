@@ -179,16 +179,18 @@ optional arguments:
 ```
 **Output:**
 Blast results for forward and reverse reads:
-`outputName-fwd-results.tab`
-`outputName-rev-results.tab`
+
+-`outputName-fwd-results.tab`
+-`outputName-rev-results.tab`
 
 Reciprocal best hits:
-`Cposadasi-test-rbbh.csv`
 
-histograms of normalised bitscores for forward, reverse and reciprocal reads:
-![Forward and reverse normalised bitscores histogram](images-for-git/Cposadasi-test_norm_bitscores_histograms.png)
-![RBH normalised bitscores histogram](images-for-git/Cposadasi-test_RBH_norm_bitscores_histogram.png)
+-`Cposadasi-test-rbbh.csv`
 
-2D density plots of normalised bitscores for forward, reverse and reciprocal reads
-![Forward and reverse normalised bitscores 2D density](images-for-git/Cposadasi-test_norm_bitscores_2D_density_histogram.png)
-![RBH normalised bitscores 2D density](images-for-git/Cposadasi-test_RBH_norm_bitscores_2D_density_histogram.png)
+- histograms of normalised bitscores for forward, reverse and reciprocal reads:
+<img src="images-for-git/Cposadasi-test_norm_bitscores_histograms.png" width="2000" />
+<img src="images-for-git/Cposadasi-test_RBH_norm_bitscores_histogram.png" width="500" />
+
+- 2D density plots of normalised bitscores for forward, reverse and reciprocal reads:
+<img src="images-for-git/Cposadasi-test_norm_bitscores_2D_density_histogram.png" width="2000" />
+<img src="images-for-git/Cposadasi-test_RBH_norm_bitscores_2D_density_histogram.png" width="500" />
