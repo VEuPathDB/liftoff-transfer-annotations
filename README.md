@@ -187,8 +187,8 @@ Reciprocal best hits:
 
 histograms of normalised bitscores for forward, reverse and reciprocal reads:
 ![Forward and reverse normalised bitscores histogram](images-for-git/Cposadasi-test_norm_bitscores_histograms.png)
-![RBH normalised bitscores histogram](images-for-git/Cposadasi-test_norm_bitscores_histograms.png)
+![RBH normalised bitscores histogram](images-for-git/Cposadasi-test_RBH_norm_bitscores_histogram.png)
 
 2D density plots of normalised bitscores for forward, reverse and reciprocal reads
-![Forward and reverse normalised bitscores 2D density](images-for-git/Cposadasi-test_norm_bitscores_histograms.png)
-![RBH normalised bitscores 2D density](images-for-git/Cposadasi-test_norm_bitscores_histograms.png)
+![Forward and reverse normalised bitscores 2D density](images-for-git/Cposadasi-test_norm_bitscores_2D_density_histogram.png)
+![RBH normalised bitscores 2D density](images-for-git/Cposadasi-test_RBH_norm_bitscores_2D_density_histogram.png)
