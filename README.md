@@ -4,9 +4,9 @@ These scripts will run liftoff, fix the problem with missing phase information a
 **The reccomended pipeline is:**
 1. `run-and-optimise-liftoff.py`
 2. Retrieve the liftoff with lowest flank number and the fewest missing features
-3. `liftoff2apollo.py`
-4. `gff-phase-finder.py`
-5. `gff_protein_change_finder.py`
+3. `gff-phase-finder.py`
+4. `liftoff2apollo.py`
+6. `gff_protein_change_finder.py`
 
 ## The scripts
 
@@ -63,6 +63,8 @@ https://github.com/The-Sequence-Ontology/Specifications/blob/master/gff3.md
 The removed attributes are as follows:
 ['coverage', 'sequence_ID', 'valid_ORFs', 'extra_copy_number', 'copy_num_ID']
 
+*This removes metadata put into the gff by liftoff by force. If you want to make it apollo compliant and keep most of the liftoff metadata use [this](https://agat.readthedocs.io/en/latest/tools/agat_sp_webApollo_compliant.html)*
+
 **Usage:**
 ```
 liftoff2apollo.py [-h] -l LIFTOFF_GFF -f GENOME_FASTA
@@ -82,6 +84,8 @@ optional arguments:
 ### `gff-phase-finder.py`
 Calculates GFF phase information for CDS which lack it. This was made for liftoff gff outputs which lack this information.
 NOTE! GFF phase is not the same as reading frame! Please see the [Sequence Ontology documentation](https://github.com/The-Sequence-Ontology/Specifications/blob/master/gff3.md)
+
+*This script is relatively slow and does not deal with instances where the start phase is not 0. I have since found a better piece of code to do this: [AGAT](https://agat.readthedocs.io/en/latest/tools/agat_sp_fix_cds_phases.html)*
 
 **Usage:**
 ```
