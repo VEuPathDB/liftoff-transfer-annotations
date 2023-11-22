@@ -2,12 +2,18 @@
 These scripts will run liftoff, fix the problem with missing phase information and then evaluate the differences in protein and nucleotide sequence between the original gff and the liftoff transferred gff.
 
 **The reccomended pipeline is:**
-1. `run-and-optimise-liftoff.py`
+1. Run `run-and-optimise-liftoff.py`
 2. Retrieve the liftoff with lowest flank number and the fewest missing features
-3. `gff-phase-finder.py`
-4. `liftoff2apollo.py`
-5. `gff_missing_cds_finder.py`
-6. `gff_protein_change_finder.py`
+3. AGAT CDS phase fixer, [here](https://agat.readthedocs.io/en/latest/tools/agat_sp_fix_cds_phases.html)
+   ```
+   agat_sp_fix_cds_frame.pl --gff infile.gff -f fasta [ -o outfile ]
+   ``` 
+4. Extract CDS protein code for the source and lifted gff with [AGAT](https://agat.readthedocs.io/en/latest/tools/agat_sp_extract_sequences.html)
+   ```
+   agat_sp_extract_sequences.pl -g infile.gff -f infile.fasta -t cds -p [-o outfile]
+   ```
+6. Run `gff_missing_cds_finder.py`
+7. Run `gff_protein_change_finder.py`
 
 ## The scripts
 
