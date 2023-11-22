@@ -6,6 +6,7 @@ These scripts will run liftoff, fix the problem with missing phase information a
 2. Retrieve the liftoff with lowest flank number and the fewest missing features
 3. `gff-phase-finder.py`
 4. `liftoff2apollo.py`
+5. `gff_missing_cds_finder.py`
 6. `gff_protein_change_finder.py`
 
 ## The scripts
@@ -79,7 +80,6 @@ optional arguments:
 **Output:**
 - `liftoff-gff-name_APOLLO.gff` - A gff format annotation file
 
-
 #
 ### `gff-phase-finder.py`
 Calculates GFF phase information for CDS which lack it. This was made for liftoff gff outputs which lack this information.
@@ -118,50 +118,61 @@ optional arguments:
 - `your-gff-name_indexed.gff` - A gff format annotation file
 
 #
+### `gff_missing_cds_finder.py`
+Examine the similarity of an old and new gff for one genome.
+
+**Usage:**
+```
+gff_missing_cds_finder.py [-h] -sg SOURCE_GFF -lg LIFTED_GFF -o OUTPUT
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -sg SOURCE_GFF, --source_gff SOURCE_GFF
+                        The source gff for the genome
+  -lg LIFTED_GFF, --lifted_gff LIFTED_GFF
+                        The lifted gff for the genome to compare against the original one
+  -o OUTPUT, --output OUTPUT
+                        The name prefix to give your outputs
+```
+**Output:**
+- `your-name-missing-cds-list.csv` - a list of transcript IDS that have a missing start, middle or end CDS
+
+#
 ### `gff_protein_change_finder.py`
-Examine the similarity of an old and new gff for one genome. 
+A script to annotate a gff with transfer vailidty information and protein identity matches 
 
 The output will report changes in the nucleotide and protein sequence
 
 **Usage:** 
 
 ```
-gff_protein_change_finder.py [-h] -gff1 OLD_GFF -gff2 NEW_GFF -f1 OLD_GENOME -f2 NEW_GENOME -o OUTPUT
+gff_protein_change_finder.py [-h] -lcds LIFTED_CDS_AA -scds SOURCE_CDS_AA -nf NEW_FASTA -sf SOURCE_FASTA -lg LIFTED_GFF -sg SOURCE_GFF -m MISSING_CDS_LISTS -o OUTPUT
 
 optional arguments:
   -h, --help            show this help message and exit
-  -gff1 OLD_GFF, --old_gff OLD_GFF
-                        The original gff for the genome
-  -gff2 NEW_GFF, --new_gff NEW_GFF
-                        The new gff for the genome to compare against the original one
-  -f1 OLD_GENOME, --old_genome OLD_GENOME
-                        A genome fasta file that corresponds to the liftoff gff
-  -f2 NEW_GENOME, --new_genome NEW_GENOME
-                        A genome fasta file that corresponds to the liftoff gff
+  -lcds LIFTED_CDS_AA, --lifted_cds_aa LIFTED_CDS_AA
+                        the new CDS proteins retrieved with AGAT
+  -scds SOURCE_CDS_AA, --source_cds_aa SOURCE_CDS_AA
+                        the source CDS proteins retrieved with AGAT
+  -nf NEW_FASTA, --new_fasta NEW_FASTA
+                        the new genome fasta associated with the lifted gff
+  -sf SOURCE_FASTA, --source_fasta SOURCE_FASTA
+                        the source genome fasta associated with the source gff and lifted gff
+  -lg LIFTED_GFF, --lifted_gff LIFTED_GFF
+                        the gff associated with the new genome produced by liftoff and phase fixed with AGAT to be annotated with information
+  -sg SOURCE_GFF, --source_gff SOURCE_GFF
+                        the gff associated with the source genome and lifted gff
+  -m MISSING_CDS_LISTS, --missing_cds_lists MISSING_CDS_LISTS
+                        csv of missing cds with the headings 'missing_start', 'missing_middle', 'missing_end'
   -o OUTPUT, --output OUTPUT
-                        The name prefix to give your outputs
+                        output names
 ```
 **Output:**
-
-- `your-output-name-missing_cds_lists.npy` - a python dictionary of gene models with the following changes:
-  - _'nucl_change'_, additions/deletions to their nucleotide length 
-  - _'missing_start'_, missing CDS at the start
-  - _'missing_middle'_, missing CDS at the middle
-  - _'missing_end'_, missing CDS at the end of the gene model
-
-- `your-output-name-STATS.csv` - a comma delimited table with the following information:
-  - _ID_, The unique CDS ID
-  - _strand_match_, whether both compared sequences are on the same strand
-  - _nucl_old_length_, nucleotide sequence length for the original gff
-  - _nucl_new_length_, nucleotide sequence length for the new gff
-  - _nucl_length_diff_, difference in nucleotide sequence length
-  - _nucl_levenshtein_ratio_, nucleotide sequence similarity calculated with [fuzzywuzzy](https://pypi.org/project/fuzzywuzzy/) sequence matching with levenshtein ratio
-  - _nucl_score_, nucleotide sequence alignment score using BLOSUM62
-  - _aa_old_length_, amino acid sequence length for the original gff
-  - _aa_new_length_, amino acid sequence length for the new gff
-  - _aa_length_diff_, amino acid in nucleotide sequence length
-  - _aa_levenshtein_ratio_, amino acid sequence similarity calculated with [fuzzywuzzy](https://pypi.org/project/fuzzywuzzy/) sequence matching with levenshtein ratio
-  - _aa_score_, amino acid sequence alignment score using BLOSUM62
+- `your-output-name_changes_marked.gff` - gff with the added attributes for 'has_missing_cds', 'has_internal_stops','valid_transfer','proteins_match_source'
+- `your-output-name_protein-change-stats.csv` - a csv containing a summary of changes in CDS between source and lifted genes
+- `your-output-name_CDS-summary.png` - A bar chart of the number of valid transfers and whether or not their protein sequence matches
+- `your-output-name_ncRNA-pseudogene-summary.png` - A bar chart of the number and types of non-coding genes coloured by the validity of the transfer
+- `your-output-name_CDS-failure-summary.png` - A bar chart of the failed CDS transfers and what is wrong with them
 
 #
 ### `find-reciprocal-best-hits.py` 

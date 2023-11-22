@@ -1,33 +1,31 @@
-from Bio import SeqIO
-from Bio import Align
 import pandas as pd
 import numpy as np
-import argparse
+import matplotlib.pyplot as plt
+import seaborn as sns
+import csv
 import os
-from fuzzywuzzy import fuzz
 import re
-from time import time
-from venny4py.venny4py import *
-  
-  
-def timer_func(func):
-    # This function shows the execution time of 
-    # the function object passed
-    def wrap_func(*args, **kwargs):
-        t1 = time()
-        result = func(*args, **kwargs)
-        t2 = time()
-        print(f'Time taken: {(t2-t1):.4f}s')
-        return result
-    return wrap_func
+from tabulate import tabulate
+from Bio import SeqIO
+from Bio.Seq import Seq
+from Bio import Align
+from Bio.Align import substitution_matrices
+from fuzzywuzzy import fuzz
+import argparse
+from tqdm import tqdm
+tqdm.pandas()
 
-def progress_bar(progress, total):
-    percent = (100*progress/float(total))
-    bar = "█"*int(percent) + "-" * (100 - int(percent))
-    print(f"\r|{bar}| {percent:.2f}%", end="\r")
+'''
+A script to annotate a gff with transfer vailidty information and protein identity
+takes:
+- missing CDS output from gff_CDS_protein_change_finder.py
+- the source CDS protein fasta
+- the new CDS protein fasta
+- the original gff for the source genome
+- the lifted gff
 
-# function to load the gff into a pandas dataframe and unpack the attributes column to access the unique IDs
-@timer_func
+'''
+
 def read_in_gff(gff):
     df = pd.read_csv(gff, sep='\t', comment='#', header=None)
     # the columns are ordered as follows: seqname, source, feature, start, end, score, strand, phase, attribute
@@ -36,261 +34,360 @@ def read_in_gff(gff):
     df[9] = df[8].str.split(';')
     attr_dicts = []
     print("\033[32m {}\033[0;0m".format("Reading "+str(gff)+"..."))
-    for index, row in df.iterrows():
+    for index, row in tqdm(df.iterrows(),total=len(df)):
         pairs = [tuple(x.split('=')) for x in row[9]]
         attr_dict = dict(pairs)
         attr_dicts += [attr_dict]
-        progress_bar(index+1,len(df))
-    print("\033[32m {}\033[0;0m".format("\n Doing some tidying..."))
+    print("\033[33m {}\033[0;0m".format("Doing some tidying..."))
     df[9]=attr_dicts
     df = pd.concat([df.drop([9], axis=1), df[9].apply(pd.Series)], axis=1)
-    df = df[[0,1,2,3,4,5,6,7,8,'ID','Parent','gene_id']]
-    df['CDS_number'] = pd.to_numeric(df['ID'].str.split('-CDS', expand=True)[1])
     df = df.fillna(value=np.nan)
-    print("\033[32m {}\033[0;0m".format("Done!\n"))
+    print("\033[33m {}\033[0;0m".format("Done!\n"))
     return df
 
-@timer_func
-def get_matching_ids(old_gff_df,new_gff_df):
-    # get a list of matching IDs
-    matching = []
-    absent = []
-    old_cds = old_gff_df.loc[old_gff_df[2]=='CDS']
-    new_cds = new_gff_df.loc[new_gff_df[2]=='CDS']
-    print("\033[32m {}\033[0;0m".format("Finding matching gene CDS exon IDs. This might take a minute..."))
-    for index, id in old_cds['ID'].items():
-        if id in list(new_cds['ID']):
-            matching.append(id)
-        elif id not in list(new_cds['ID']):
-            absent.append(id)
-        progress_bar(index+1,len(old_gff_df))
-    print("\n")
-    return matching, absent # absent will be used for metrics
-
-def get_gene_sequence(df, ID, record_dict):
-    # gets sequence for a gff record
-    start = df.loc[df['ID']==ID][3].item()
-    end = df.loc[df['ID']==ID][4].item()
-    seqname = df.loc[df['ID']==ID][0].item()
-    if df.loc[df['ID']==ID][6].item() == "+":
-        sequence = record_dict[seqname].seq[int(start)-1:int(end)]
-        strand = "+"
-    elif df.loc[df['ID']==ID][6].item() == "-":
-        sequence = record_dict[seqname].seq[int(start)-1:int(end)].reverse_complement()
-        strand = "-"
-    return sequence, strand
-
-def nucleotide_match(old_sequence, new_sequence):
-    aligner = Align.PairwiseAligner()
-    old_sequence = old_sequence.upper()
-    new_sequence = new_sequence.upper()
-    old_length = len(old_sequence)
-    new_length = len(new_sequence)
-    length_diff = old_length - new_length
-    levenshtein_ratio = fuzz.ratio(old_sequence,new_sequence)
-    score = aligner.score(old_sequence, new_sequence)
-    nucleotide_match_stats = [old_length, new_length, length_diff, levenshtein_ratio, score]
-    return nucleotide_match_stats
-
-def protein_match(old_sequence, new_sequence, old_phase, new_phase):
-    aligner = Align.PairwiseAligner()
-    matrix = Align.substitution_matrices.load('BLOSUM62')
+def check_valid_CDS_transfer(source_cds_aa,lifted_cds_aa,missing_cds):
+    # load the fasta
+    source_record_dict = SeqIO.to_dict(SeqIO.parse(source_cds_aa,"fasta"))
+    lifted_record_dict = SeqIO.to_dict(SeqIO.parse(lifted_cds_aa,"fasta"))
+    missing_cds_df = pd.read_csv(missing_cds)
+    aligner = Align.PairwiseAligner(mode='global')
+    matrix = substitution_matrices.load("BLOSUM62")
     aligner.substitution_matrix = matrix
-    old_protein = old_sequence[int(old_phase):].translate(to_stop=True)
-    new_protein = new_sequence[int(new_phase):].translate(to_stop=True)
-    old_length = len(old_protein)
-    new_length = len(new_protein)
-    length_diff = old_length - new_length
-    levenshtein_ratio = fuzz.ratio(old_protein,new_protein)
-    if (old_length>0) and (new_length>0):
-        score = aligner.score(old_protein, new_protein)
-    else:
-        score = np.nan
-    protein_match_stats = [old_length, new_length, length_diff, levenshtein_ratio, score]
-    return protein_match_stats
-
-@timer_func
-def get_matching_genes(matching, old_gff_df, new_gff_df, old_fasta, new_fasta):
-    # Find percent match between nucleotide sequences with matching gene ids
-    # between new and old gffs
-    print("\033[32m {}\033[0;0m".format("Calculating gene similarity metrics for "+str(len(matching))+" IDs"))
-    old_record_dict = SeqIO.to_dict(SeqIO.parse(old_fasta,'fasta'))
-    new_record_dict = SeqIO.to_dict(SeqIO.parse(new_fasta,'fasta'))
-    match_stats = [["ID", "strand_match","nucl_old_length", "nucl_new_length", "nucl_length_diff", "nucl_levenshtein_ratio", "nucl_score",\
-                   "aa_old_length", "aa_new_length", "aa_length_diff", "aa_levenshtein_ratio", "aa_score"]]
-    for index, ID in enumerate(matching):
-        old_sequence, old_strand = get_gene_sequence(old_gff_df, ID, old_record_dict)
-        new_sequence, new_strand = get_gene_sequence(new_gff_df, ID, new_record_dict)
-        strand_match = (old_strand==new_strand)
-        nucleotide_match_stats = nucleotide_match(old_sequence, new_sequence)
-        old_phase = old_gff_df.loc[old_gff_df['ID']==ID][7].item()
-        new_phase = new_gff_df.loc[new_gff_df['ID']==ID][7].item()
-        protein_match_stats = protein_match(old_sequence, new_sequence, old_phase, new_phase)
-        match_stats.append([ID, strand_match] + nucleotide_match_stats + protein_match_stats)
-        progress_bar(index+1,len(matching))
+    df = pd.DataFrame(columns=['transcript_ID','type','source_aa','lifted_aa','source_seq',\
+                               	'lifted_seq','internal_stop_codons','has_start','has_end', \
+                                'has_missing_cds','global_alignment_score',\
+                                'percent_similarity_levenshtein','valid_transfer','proteins_match_source'])
+    df['transcript_ID'] = source_record_dict.keys()
+    df['type'] = 'CDS'
+    print("\033[32m {}\033[0;0m".format("Getting CDS sequences and alignment scores"))
+    for record in tqdm(source_record_dict, total=len(source_record_dict)):
+        df.loc[df['transcript_ID']==record,'source_aa'] = str(source_record_dict[record].seq)
+        if record in lifted_record_dict.keys():
+            df.loc[df['transcript_ID']==record,'lifted_aa'] = str(lifted_record_dict[record].seq)
+            df.loc[df['transcript_ID']==record,'global_alignment_score'] = aligner.score(source_record_dict[record].seq, lifted_record_dict[record].seq)
+            # levenshtein similarity score
+            df.loc[df['transcript_ID']==record,'percent_similarity_levenshtein'] = fuzz.ratio(source_record_dict[record].seq,lifted_record_dict[record].seq)
+            # check if transcript has any CDS are missing
+            if (record in list(missing_cds_df['missing_start'])) or (record in list(missing_cds_df['missing_middle'])) or (record in list(missing_cds_df['missing_end'])):
+                df.loc[df['transcript_ID']==record, 'has_missing_cds'] = True
+            else:
+                df.loc[df['transcript_ID']==record, 'has_missing_cds'] = False
+        # count internal stop codons in lifted aa
+        df['internal_stop_codons'] = df['lifted_aa'].str[1:-2].str.count('\*')
+        # check start codon and end codon in lifted aa
+        df['has_start'] = df['lifted_aa'].str[0] == 'M'
+        df['has_end'] = df['lifted_aa'].str[-1] == '*'
     print()
-    return match_stats
+    print("\033[32m {}\033[0;0m".format("Marking valid transfers and protein matches"))
+    for index, row in tqdm(df[~df['lifted_aa'].isna()].iterrows(), total = len(df[~df['lifted_aa'].isna()])):
+        if (row['internal_stop_codons']!=0) or \
+                (row['has_missing_cds']==True):
+            df.loc[df['transcript_ID']==row['transcript_ID'], 'valid_transfer'] = False
+        else:
+            df.loc[df['transcript_ID']==row['transcript_ID'], 'valid_transfer'] = True
+        if (row['source_aa']==row['lifted_aa']):
+            df.loc[df['transcript_ID']==row['transcript_ID'], 'proteins_match_source'] = True
+        elif (row['source_aa']!=row['lifted_aa']):
+            df.loc[df['transcript_ID']==row['transcript_ID'], 'proteins_match_source'] = False
+    print("\033[33m {}\033[0;0m".format("Done!\n"))
+    df.loc[(df['internal_stop_codons']>0)&(~df['lifted_aa'].isna()), 'has_internal_stops'] = True
+    df.loc[(df['internal_stop_codons']==0)&(~df['lifted_aa'].isna()), 'has_internal_stops'] = False
+    return df
+    
+def check_ncRNA_and_pseudogene(source_fasta, new_fasta, source_gff, lifted_gff):
+    print("\033[32m {}\033[0;0m".format("Checking ncRNA and Pseudogenes"))
+    aligner = Align.PairwiseAligner(mode='global')
+    matrix = substitution_matrices.load("BLOSUM62")
+    aligner.substitution_matrix = matrix
+    source_gff_df= read_in_gff(source_gff)
+    lifted_gff_df = read_in_gff(lifted_gff)
+    lifted_record_dict = SeqIO.to_dict(SeqIO.parse(new_fasta, "fasta"))
+    source_record_dict = SeqIO.to_dict(SeqIO.parse(source_fasta, "fasta"))
+    tr_df = pd.DataFrame(columns=['transcript_ID','type','source_seq','lifted_seq','global_alignment_score',\
+                               'percent_similarity_levenshtein','valid_transfer','proteins_match_source'])
+    # get transcript IDs
+    def get_transcript_IDs(gff_df):
+        Parent_IDs = list(gff_df.loc[gff_df[2].isin(['ncRNA_gene','pseudogene'])]['ID'])
+        ncRNA_pseudo_gff_df = list(gff_df.loc[gff_df['Parent'].isin(Parent_IDs), 'ID'])
+        return ncRNA_pseudo_gff_df
+    lifted_ncRNA_pseudo_IDs = get_transcript_IDs(lifted_gff_df)
+    source_ncRNA_pseudo_IDs = get_transcript_IDs(source_gff_df)
+    tr_df['transcript_ID'] = source_ncRNA_pseudo_IDs
+    # get the sequence information for lifted transcripts
+    print("\033[32m {}\033[0;0m".format("Getting sequence information for lifted transcripts"))
+    for index, record in tqdm(lifted_gff_df.loc[lifted_gff_df['ID'].isin(lifted_ncRNA_pseudo_IDs)].iterrows(),
+                              total=len(lifted_gff_df.loc[lifted_gff_df['ID'].isin(lifted_ncRNA_pseudo_IDs)])):
+        sequence = lifted_record_dict[record[0]].seq[record[3]:record[4]-1]
+        seq_type = record[2]
+        if record[6] == '-':
+            sequence = sequence.reverse_complement()
+        tr_df.loc[tr_df['transcript_ID']==record['ID'], 'lifted_seq'] = str(sequence)
+        tr_df.loc[tr_df['transcript_ID']==record['ID'], 'type'] = str(seq_type)
+    # get the sequence information for source transcripts
+    print("\033[32m {}\033[0;0m".format("Getting sequence information for source transcripts"))
+    for index, record in tqdm(source_gff_df.loc[source_gff_df['ID'].isin(source_ncRNA_pseudo_IDs)].iterrows(),
+                              total=len(source_gff_df.loc[source_gff_df['ID'].isin(source_ncRNA_pseudo_IDs)])):
+        sequence = source_record_dict[record[0]].seq[record[3]:record[4]-1]
+        if record[6] == '-':
+            sequence = sequence.reverse_complement()
+        tr_df.loc[tr_df['transcript_ID']==record['ID'], 'source_seq'] = str(sequence)
+    # get stats
+    for index, record in tr_df.loc[tr_df['transcript_ID'].isin(lifted_ncRNA_pseudo_IDs)].iterrows():
+            tr_df.loc[(tr_df['transcript_ID']==record['transcript_ID']),'global_alignment_score'] = aligner.score(Seq(record['lifted_seq']).translate(), Seq(record['source_seq']).translate())
+            # levenshtein similarity score
+            tr_df.loc[(tr_df['transcript_ID']==record['transcript_ID']),'percent_similarity_levenshtein'] = fuzz.ratio(Seq(record['lifted_seq']).translate(), Seq(record['source_seq']).translate())
+            tr_df.loc[(tr_df['transcript_ID']==record['transcript_ID']),'proteins_match_source'] = Seq(record['lifted_seq']).translate() == Seq(record['source_seq']).translate()
+    tr_df['valid_transfer'] =  tr_df['proteins_match_source']
+    return tr_df, lifted_gff_df
 
-def find_missing_middle(match_stats):
-    missing_middle = []
-    print('Finding missing middle cds')
-    for index, item in match_stats['gene_id'].items():
-        cds = match_stats.loc[match_stats['gene_id']==item].sort_values(by='CDS_number')['CDS_number'].reset_index(drop=True)  
-        if cds[0] == 1:
-            expected=1
-        elif cds[0] != 1:
-            expected = int(cds[0])
-        for i in list(cds):
-            if expected == i: 
-                expected+=1
-            elif (expected != i) & (item not in missing_middle):
-                missing_middle.append(item)
-        progress_bar(index+1,len(match_stats))
-    print()
-    return missing_middle
+def add_attribute_to_gff(lifted_gff_df, transcript_changes_df, lifted_gff, name, outdir):
+    merged = lifted_gff_df.merge(transcript_changes_df[['transcript_ID','has_missing_cds','has_internal_stops','valid_transfer','proteins_match_source']], left_on='ID', right_on='transcript_ID', how='left')
+    # attributes to keep
+    # remove ebi biotypes from all rows
+    merged = merged[[0,1,2,3,4,5,6,7,8,'ID','description','Parent','Note','gene_id', 
+                     'protein_source_id','Name','has_missing_cds',
+                     'has_internal_stops','valid_transfer','proteins_match_source']]
+    merged.fillna(value=np.nan, inplace=True)
+    attribute_names = ['ID','description','Parent','Note','gene_id', 
+                     'protein_source_id','Name','has_missing_cds',
+                     'has_internal_stops','valid_transfer','proteins_match_source']
+    new_attributes = []
+    for index, row in tqdm(merged.iterrows(),total=len(merged)):
+        attr = ''
+        for name in attribute_names:
+            if pd.isna(row[name])==False:
+                attr = attr + name + "="+str(row[name])+';'
+        attr = attr[:-1]
+        new_attributes.append(attr)
+    merged['col_9'] = new_attributes
+    # write new gff
+    gff_name = str(os.path.basename(lifted_gff).replace(".gff","_changes_marked.gff"))
+    out_name = os.path.join(outdir, gff_name)
+    print("\033[97;46m {}\033[0;0m".format("Writing new gff to:"))
+    print(tabulate([['Annotated gff', out_name]], 
+                    headers=['Type', 'File name']))
+    print('')
+    comments=[]
+    with open(lifted_gff, "r", encoding="utf8") as fin:
+         gff_reader = csv.reader(fin, delimiter="\t")
+         for row in gff_reader:
+            if any("#" in s for s in row):
+                    comments.append(row)
+    f = open(str(out_name), 'a', newline='')
+    for i in comments:
+        f.write(str(i[0])+"\n")
+    merged[[0,1,2,3,4,5,6,7,'col_9']].to_csv(f, sep='\t', index=None, header=None)
+    f.close()
+    return
 
-def find_missing_end(match_stats, old_gff_df):
-    print("Finding missing ends cds")
-    old_max_cds = old_gff_df.loc[(old_gff_df[2]=="CDS"), ["Parent","ID","CDS_number"]].groupby('Parent').max()[['ID','CDS_number']].reset_index()
-    old_max_cds['gene_id'] = old_max_cds.loc[:,'ID'].str.split('-CDS', expand=True)[0]
-    match_stats_max = match_stats.groupby('gene_id').max()['CDS_number'].reset_index()
-    merged_df = old_max_cds.merge(match_stats_max, on='gene_id', how='outer').fillna(np.NaN).dropna()
-    missing_end = list(merged_df.loc[merged_df['CDS_number_x'] != merged_df['CDS_number_y']].dropna()['gene_id'])
-    return missing_end
+def plot_and_save(df, outdir,name):
+    # save the dataframe
+    csvname = name+'_protein-change-stats.csv'
+    summarypng = name+'_CDS-summary.png'
+    summarypng2 = name+'_ncRNA-pseudogene-summary.png'
+    failurepng = name+'_CDS-failure-summary.png'
+    print("\033[97;46m {}\033[0;0m".format("Saving plots and summaries of liftoff successes and failures:"))
+    print(tabulate([['Stats', csvname], 
+                    ['Transfer successes and failures', summarypng],
+                    ['Breakdown of failures', failurepng],
+                    ['ncRNA and pseudogenes transfers', summarypng2]],
+                    headers=['', 'File name']))
+    df.to_csv(os.path.join(outdir, csvname),header=True, index=None)
+    # plot overall valid CDS transfers and protein matches
+    hue_order=[True, False]
+    fig, ax = plt.subplots(figsize=(6,5))
+    sns.countplot(df[df['type']=='CDS'], x='valid_transfer', hue='proteins_match_source',
+                  hue_order=hue_order, order=[True,False], palette='bone')
+    plt.title('CDS transfer rates')
+    plt.xlabel('Valid transfer')
+    plt.ylabel('Count')
+    plt.legend(title='Proteins match')
+    plt.savefig(os.path.join(outdir, summarypng),dpi=150)
+    # plot a breakdown of invalid CDS transfers
+    fig, ax = plt.subplots(figsize=(6,5))
+    sns.countplot(df[df['valid_transfer']==False][['has_missing_cds','has_internal_stops','proteins_match_source']].melt()\
+                  .replace({'has_missing_cds':'Has missing cds','has_internal_stops':'Has internal stops','proteins_match_source':'Proteins match source'}),\
+                   hue='value', hue_order=hue_order, x='variable', palette='bone')
+    plt.title('CDS transfer failure breakdown for '+str(len(df[df['valid_transfer']==False]))+' failures')
+    plt.ylabel('Count')
+    plt.xlabel('Failure type')
+    plt.legend(title='Value')
+    plt.savefig(os.path.join(outdir, failurepng),dpi=150)
+    # plot valid transfers for ncRNA and pseudogenes
+    fig, ax = plt.subplots(figsize=(6,6))
+    sns.countplot(df[df['type']!='CDS'], x='type', hue='valid_transfer', hue_order=hue_order, palette='bone')
+    ax.set_xticklabels(ax.get_xticklabels(), rotation=90)
+    plt.title('ncRNA and pseudogene transfer rates')
+    plt.xlabel('Type')
+    plt.ylabel('Count')
+    plt.legend(title='Valid transfer')
+    plt.tight_layout()
+    plt.savefig(os.path.join(outdir, summarypng2),dpi=150)
+    return
 
-@timer_func
-def get_stats(old_gff_df, match_stats, name):
-    df = pd.DataFrame(match_stats[1:], columns=match_stats[0])
-    df['CDS_number'] = pd.to_numeric(df.loc[:,'ID'].str.split('-CDS', expand=True)[1])
-    df['gene_id'] = df.loc[:,'ID'].str.split('-CDS', expand=True)[0]
-    df.to_csv(str(name)+"-STATS.csv", sep=',',index=None, na_rep=np.NaN)
-    ## calculations
-    first = (df.sort_values(['gene_id','CDS_number']).groupby('gene_id').first()['CDS_number'] != 1).reset_index()
-    ## the stats to keep
-    print("Finding changes in sequence length")
-    changed_nucl = set(list(df.loc[df['nucl_length_diff']>0, 'gene_id']))
-    print("Finding missing start cds")
-    missing_start = set(list(first.loc[first['CDS_number']==True, 'gene_id']))
-    missing_middle = set(find_missing_middle(df))
-    missing_end = set(find_missing_end(df, old_gff_df))
-    print(str(len(list(df.loc[df['nucl_length_diff']>0, 'ID'])))+" out of "+str(len(df)) + " CDS have changed sequence length")
-    print(str(len(missing_start))+ " out of "+str(len(df['gene_id'].unique())) + " protein coding sequences have a missing start codon")
-    print(str(len(missing_middle))+" out of "+str(len(df['gene_id'].unique())) + " protein coding sequences have a missing middle codon")
-    print(str(len(missing_end))+" out of "+str(len(df['gene_id'].unique())) + " protein coding sequences have a missing end codon")
-    differences = {"changed_nucl":changed_nucl, "missing_start":missing_start, "missing_middle":missing_middle, "missing_end":missing_end}
-    a = pd.DataFrame(differences['changed_nucl'], columns=['changed_nucl'])
-    b = pd.DataFrame(differences['missing_start'], columns=['missing_start'])
-    c = pd.DataFrame(differences['missing_middle'], columns=['missing_middle'])
-    d = pd.DataFrame(differences['missing_end'], columns=['missing_end'])
-    differences = a.join(b, how='outer').join(c, how='outer').join(d, how='outer')
-    df.to_csv(name+'-missing-cds-list.csv', index=None, header=True)
-    venny4py(sets=differences, out = name+"_venn", ext='svg')
-    return differences, df
-
-@timer_func
 def main():
+    '''
+    
+    '''
     parser = argparse.ArgumentParser(
-        description="examine the similarity of an old and new gff for one genome",
-        epilog="written by Helen Davison")
-    parser.add_argument('-gff1', '--old_gff', \
-                        help="The original gff for the genome",
-                        required=True)
-    parser.add_argument('-gff2', '--new_gff', \
-                        help="The new gff for the genome to compare against the original one",
-                        required=True)
-    parser.add_argument('-f1','--old_genome', \
-                        help="A genome fasta file that corresponds to the liftoff gff",
-                        required=True)
-    parser.add_argument('-f2','--new_genome', \
-                        help="A genome fasta file that corresponds to the liftoff gff",
-                        required=True)
+     formatter_class=argparse.RawDescriptionHelpFormatter,
+     description='''\
+Adds record of liftoff errors to gff attributes
+-------------------------------------------------------------
+A script to annotate a gff with transfer vailidty information and protein identity
+takes:
+- missing CDS output from gff_CDS_protein_change_finder.py
+- the source genome nucleotide fasta
+- the new genome nucleotide fasta
+- the original gff for the source genome
+- a gff of annotations lifted from the source genome to the new genome
+
+     ''',
+     epilog="written by Helen Rebecca Davison") 
+    parser.add_argument('-lcds', '--lifted_cds_aa', \
+                    help="the new CDS proteins retrieved with AGAT",
+                    required=True)
+    parser.add_argument('-scds','--source_cds_aa', \
+                    help="the source CDS proteins retrieved with AGAT",
+                    required=True)
+    parser.add_argument('-nf', '--new_fasta', \
+                    help="the new genome fasta associated with the lifted gff",
+                    required=True)
+    parser.add_argument('-sf','--source_fasta', \
+                    help="the source genome fasta associated with the source gff and lifted gff",
+                    required=True)
+    parser.add_argument('-lg','--lifted_gff', \
+                    help="the gff associated with the new genome produced by liftoff and phase fixed with AGAT to be annotated with information",
+                    required=True)
+    parser.add_argument('-sg','--source_gff', \
+                    help="the gff associated with the source genome and lifted gff",
+                    required=True)   
+    parser.add_argument('-m','--missing_cds_lists', \
+                    help="csv of missing cds with the headings 'missing_start', 'missing_middle', 'missing_end'",
+                    required=True)
     parser.add_argument('-o','--output', \
-                        help="The name prefix to give your outputs",
-                        required=True)
+                    help="output name",
+                    required=True)
+     
     args = parser.parse_args()
 
+    # define input variables
+    lifted_cds = args.lifted_cds_aa
+    source_cds= args.source_cds_aa
+    missing_cds = args.missing_cds_lists
+    
+    new_fasta = args.new_fasta
+    source_fasta = args.source_fasta
 
-    old_genome = args.old_genome
-    new_genome = args.new_genome
-    old_gff = args.old_gff
-    new_gff = args.new_gff
+    lifted_gff = args.lifted_gff
+    source_gff = args.source_gff
+
     name = args.output
 
     # ERROR HANDLING
     try:
-        with open(old_genome, "r") as f:
-            alphabet = {'dna':re.compile('^[actgn]*$', re.I)}
-            first = str(f.readline())
-            second = str(f.readline())
-            if ">" not in first:
-                raise Exception("Your old genome is not a fasta file")
-            elif alphabet['dna'].search(second) is None:
-                raise Exception("Your old genome is not nucleotide sequence")
+        def read(fasta):
+            record_dict = SeqIO.to_dict(SeqIO.parse(fasta, "fasta"))
+            sequence = record_dict[list(record_dict.keys())[0]].seq
+            return str(sequence)
+        def validate(seq, alphabet='dna'):
+            alphabets = {'dna': re.compile('^[acgtn]*$', re.I), 
+             'protein': re.compile('^[acdefghiklmnpqrstvwy*]*$', re.I)}
+            if alphabets[alphabet].search(seq) is not None:
+                return True
+            else:
+                return False
+        if validate(read(source_cds),'protein') == False:
+            raise Exception("Your source cds is not protein sequence")
+        if validate(read(lifted_cds),'protein') == False:
+            raise Exception("Your lifted cds is not protein sequence")
+        if validate(read(source_fasta),'dna') == False:
+            raise Exception("Your source fasta is not nucleotide sequence")
+        if validate(read(new_fasta),'dna') == False:
+            raise Exception("Your new fasta is not nucleotide sequence")
     except FileNotFoundError:
-        print("Old genome fasta is not in the current directory")
+        print("One or more sequence files are not in the in the current directory")
 
     try:
-        with open(new_genome, "r") as f:
-            alphabet = {'dna':re.compile('^[actgn]*$', re.I)}
-            first = str(f.readline())
-            second = str(f.readline())
-            if ">" not in first:
-                raise Exception("Your new genome is not a fasta file")
-            elif alphabet['dna'].search(second) is None:
-                raise Exception("Your new genome is not nucleotide sequence")
+        def is_fasta(filename):
+            with open(filename, "r") as handle:
+                fasta = SeqIO.parse(handle, "fasta")
+                return any(fasta)  # False when `fasta` is empty, i.e. wasn't a FASTA file
+        if is_fasta(source_cds) == False:
+            raise Exception("Your source cds is not fasta")
+        if is_fasta(lifted_cds) == False:
+            raise Exception("Your lifted cds is not fasta")
+        if is_fasta(source_fasta) == False:
+            raise Exception("Your source fasta is not fasta")
+        if is_fasta(new_fasta) == False:
+            raise Exception("Your new fasta is not fasta")
     except FileNotFoundError:
-        print("New genome fasta is not in the current directory")
-
+        print("One or more sequence files are not in the in the current directory")
+        
     try:
-        with open(old_gff, "r") as f:
+        with open(source_gff, "r") as f:
             if "#" not in str(f.readline()):
-                raise Exception("No header lines found, check that your old gff file is definitely a gff")
-        gff_id = [line for line in open(old_gff) if line[:1] != '#'][0].split()[0]
+                raise Exception("No header lines found, check that your source gff file is definitely a gff")
+        gff_id = [line for line in open(source_gff) if line[:1] != '#'][0].split()[0]
     except FileNotFoundError:
-        print("Old gff is not in the current directory")
+        print("Source gff is not in the current directory")
 
     try:
-        with open(new_gff, "r") as f:
+        with open(lifted_gff, "r") as f:
             if "#" not in str(f.readline()):
                 raise Exception("No header lines found, check that your new gff file is definitely a gff")
-        gff_id = [line for line in open(old_gff) if line[:1] != '#'][0].split()[0]
+        gff_id = [line for line in open(lifted_gff) if line[:1] != '#'][0].split()[0]
     except FileNotFoundError:
         print("New gff is not in the current directory")
 
     try:
-        gff_id = [line for line in open(old_gff) if line[:1] != '#'][0].split()[0]
-        with open(old_genome, "r") as f:
+        gff_id = [line for line in open(source_gff) if line[:1] != '#'][0].split()[0]
+        with open(source_fasta, "r") as f:
             found=False
             if any(line for line in f if gff_id in line):
                 found=True
             if found == False:
-                raise Exception("Contig IDs do not match between the old gff and old genome")
+                raise Exception("Contig IDs do not match between the source gff and source genome")
     except FileNotFoundError:
-        print("Your old gff file is not in the current directory")
+        print("Your source gff file is not in the current directory")
     
     try:
-        gff_id = [line for line in open(new_gff) if line[:1] != '#'][0].split()[0]
-        with open(new_genome, "r") as f:
+        gff_id = [line for line in open(lifted_gff) if line[:1] != '#'][0].split()[0]
+        with open(new_fasta, "r") as f:
             found=False
             if any(line for line in f if gff_id in line):
                 found=True
             if found == False:
-                raise Exception("Contig IDs do not match between the new gff and new genome")
+                raise Exception("Contig IDs do not match between the lifted gff and new genome")
     except FileNotFoundError:
         print("Your new gff file is not in the current directory")
+    
+    # define output dir
+    filename = name+"-cds-content-check"
+    outdir = os.path.join(os.getcwd(),filename)
+    os.makedirs(outdir, exist_ok=False)
 
-    # RUN FUNCTIONS
-    old_gff_df = read_in_gff(old_gff)
-    new_gff_df = read_in_gff(new_gff)
-    matching, absent = get_matching_ids(old_gff_df,new_gff_df)
-    match_stats = get_matching_genes(matching, old_gff_df, new_gff_df, old_genome, new_genome)
-    print(str(len(absent))+ " ids out of a total of "+str(len(matching)+len(absent)) + " did not have a match in the new gff.")
-    differences, stats_df = get_stats(old_gff_df, match_stats, name)
+    print("\033[97;46m {}\033[0;0m".format("Begining to find and annotate changes "))
+    print("\033[33m {}\033[0;0m".format("Input files being used: \n"))
+    print(tabulate([['Source genome', source_fasta],
+                    ['New genome', new_fasta],
+                    ['Source gff', source_gff],
+                    ['Lifted gff', lifted_gff],
+                    ['Source CDS protein', source_cds],
+                    ['Lifted CDS protein', lifted_cds]
+                    ], 
+                    headers=['Type', 'File name']))
+    print('')
 
-    #for item in list(stats_df['gene_id']):
-    #    if item not in list(new_gff_df.loc[new_gff_df[2]=='CDS']['Parent']):
-    #        missing.append(item)
-    #        print(item)
-    return
+    # get protein records
+    transcript_changes_df = check_valid_CDS_transfer(source_cds,lifted_cds,missing_cds)
+    tr_df, lifted_gff_df= check_ncRNA_and_pseudogene(source_fasta, new_fasta, source_gff, lifted_gff)
+    transcript_changes_df = transcript_changes_df.merge(tr_df, how='outer')
+    # output gff
+    add_attribute_to_gff(lifted_gff_df, transcript_changes_df, lifted_gff, name, outdir)
+    # output plots
+    plot_and_save(transcript_changes_df, outdir, name)
+
+    return()
+
 main()
-

@@ -30,3 +30,11 @@ aa-to-compare/*
 1-Anopheles_funestus-RBH-results/*
 2-Lutzomyia_longipalpis-RBH-results/*
 3-Phelbotomus_papatasi-RBH-results/*
+cds-aa-to-compare/*
+1-Anopheles_funestus-2-cds-content-check/*
+2-Lutzomyia_longipalpis-cds-content-check/*
+3-Phelbotomus_papatasi-cds-content-check/*
+4-Coccidioides_posadasii_silveira-cds-content-check/*
+5-Anopheles_gambiae-cds-content-check/*
+bitscore-GMM.py
+gff_liftoff_error_finder.py

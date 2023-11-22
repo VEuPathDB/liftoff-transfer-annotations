@@ -9,6 +9,8 @@ parser = argparse.ArgumentParser(
      description='''\
 Convert liftoff GFF3 outputs into Apollo friendly GFF3 files.
 -------------------------------------------------------------
+** This is a brute force method for one specific purpose, please be careful **
+
 Liftoff adds several fields to the gff attributes column that are unused by Apollo.
 
 This script will remove added attributes and convert the header to Apollo format which uses this:

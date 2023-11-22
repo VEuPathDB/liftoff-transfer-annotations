@@ -92,9 +92,12 @@ def main():
      description='''
         Calculates GFF phase information for CDS which lack it. 
         -------------------------------------------------------
+        ** A superior form of this has been made by AGAT, please use that! **
+
         This was made for liftoff gff outputs which lack this information.
         GFF phase is not the same as reading frame! Please see the documentation:
-        https://github.com/The-Sequence-Ontology/Specifications/blob/master/gff3.md''',
+        https://github.com/The-Sequence-Ontology/Specifications/blob/master/gff3.md
+        ''',
         epilog="written by Helen R. Davison")
     parser.add_argument('-gff', '--liftoff_gff', dest="liftoff_gff",\
                         type=argparse.FileType('r'), help="The gff without phase information (made for liftoff)",
