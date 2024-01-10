@@ -24,6 +24,8 @@ takes:
 - the original gff for the source genome
 - the lifted gff
 
+Also produces a database of what the changes are and figures to illustrate changes.
+
 '''
 
 def read_in_gff(gff):
@@ -42,7 +44,7 @@ def read_in_gff(gff):
     df[9]=attr_dicts
     df = pd.concat([df.drop([9], axis=1), df[9].apply(pd.Series)], axis=1)
     df = df.fillna(value=np.nan)
-    print("\033[33m {}\033[0;0m".format("Done!\n"))
+    print("\033[33m {}\033[0;0m".format("Done!"))
     return df
 
 def check_valid_CDS_transfer(source_cds_aa,lifted_cds_aa,missing_cds):
@@ -89,7 +91,7 @@ def check_valid_CDS_transfer(source_cds_aa,lifted_cds_aa,missing_cds):
             df.loc[df['transcript_ID']==row['transcript_ID'], 'proteins_match_source'] = True
         elif (row['source_aa']!=row['lifted_aa']):
             df.loc[df['transcript_ID']==row['transcript_ID'], 'proteins_match_source'] = False
-    print("\033[33m {}\033[0;0m".format("Done!\n"))
+    print("\033[33m {}\033[0;0m".format("Done!"))
     df.loc[(df['internal_stop_codons']>0)&(~df['lifted_aa'].isna()), 'has_internal_stops'] = True
     df.loc[(df['internal_stop_codons']==0)&(~df['lifted_aa'].isna()), 'has_internal_stops'] = False
     return df
@@ -205,10 +207,10 @@ def plot_and_save(df, outdir,name):
     plt.savefig(os.path.join(outdir, summarypng),dpi=150)
     # plot a breakdown of invalid CDS transfers
     fig, ax = plt.subplots(figsize=(6,5))
-    sns.countplot(df[df['valid_transfer']==False][['has_missing_cds','has_internal_stops','proteins_match_source']].melt()\
+    sns.countplot(df.loc[(df['valid_transfer']==False)&(df['type']=='CDS')][['has_missing_cds','has_internal_stops','proteins_match_source']].melt()\
                   .replace({'has_missing_cds':'Has missing cds','has_internal_stops':'Has internal stops','proteins_match_source':'Proteins match source'}),\
                    hue='value', hue_order=hue_order, x='variable', palette='bone')
-    plt.title('CDS transfer failure breakdown for '+str(len(df[df['valid_transfer']==False]))+' failures')
+    plt.title('CDS transfer failure breakdown for '+str(len(df.loc[(df['valid_transfer']==False)&(df['type']=='CDS')]))+' failures')
     plt.ylabel('Count')
     plt.xlabel('Failure type')
     plt.legend(title='Value')
@@ -236,11 +238,13 @@ Adds record of liftoff errors to gff attributes
 -------------------------------------------------------------
 A script to annotate a gff with transfer vailidty information and protein identity
 takes:
-- missing CDS output from gff_CDS_protein_change_finder.py
+- A list of missing CDS output from gff_missing_cds_finder.py
 - the source genome nucleotide fasta
 - the new genome nucleotide fasta
 - the original gff for the source genome
 - a gff of annotations lifted from the source genome to the new genome
+
+Also produces a database of what the changes are and figures to illustrate changes.
 
      ''',
      epilog="written by Helen Rebecca Davison") 
