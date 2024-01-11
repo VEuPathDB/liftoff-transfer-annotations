@@ -40,6 +40,8 @@ bitscore-GMM.py
 gff_liftoff_error_finder.py
 .An_gambiaeNEW_GENOMEGCA_943734735.2_idAnoGambNW_F1_1_genomic-summary.txt
 feature-overlap-finder.py
-gff_indexer.py
 liftoff2apollo.py
 find-reciprocal-best-hits.py
+gff-phase-finder.py
+legacy-readme.md
+gff_indexer.py
