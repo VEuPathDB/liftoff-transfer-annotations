@@ -62,7 +62,7 @@ optional arguments:
 
 #
 ### `gff_missing_cds_finder.py`
-Examine the similarity of an old and new gff for one genome.
+Examine the similarity of an old and new gff for one genome and retireve a list of missing CDS.
 
 **Usage:**
 ```
