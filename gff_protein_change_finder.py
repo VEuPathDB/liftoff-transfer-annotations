@@ -18,11 +18,11 @@ tqdm.pandas()
 '''
 A script to annotate a gff with transfer vailidty information and protein identity
 takes:
-- missing CDS output from gff_CDS_protein_change_finder.py
+- missing CDS csv from gff_missing_cds_finder.py
 - the source CDS protein fasta
 - the new CDS protein fasta
 - the original gff for the source genome
-- the lifted gff
+- the lifted gff for the new genome
 
 Also produces a database of what the changes are and figures to illustrate changes.
 

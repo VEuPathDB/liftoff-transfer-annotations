@@ -58,70 +58,7 @@ optional arguments:
 
 - `[Old_Genome_name]-to-[New_Genome_name]-UNMAPPED-FEATURE-COUNTS.png"` - a plot of the number of unmapped features
 
-#
-### `liftoff2apollo.py`
 
-Convert liftoff GFF3 outputs into Apollo friendly GFF3 files.
-Liftoff adds several fields to the gff attributes column that are unused by Apollo.
-
-This script will remove added attributes and convert the header to Apollo format which uses this:
-https://github.com/The-Sequence-Ontology/Specifications/blob/master/gff3.md
-
-The removed attributes are as follows:
-['coverage', 'sequence_ID', 'valid_ORFs', 'extra_copy_number', 'copy_num_ID']
-
-*This removes metadata put into the gff by liftoff by force. If you want to make it apollo compliant and keep most of the liftoff metadata use [this](https://agat.readthedocs.io/en/latest/tools/agat_sp_webApollo_compliant.html)*
-
-**Usage:**
-```
-liftoff2apollo.py [-h] -l LIFTOFF_GFF -f GENOME_FASTA
-
-optional arguments:
-  -h, --help            show this help message and exit
-  -l LIFTOFF_GFF, --liftoff_gff LIFTOFF_GFF
-                        A gff file produced by liftoff
-  -f GENOME_FASTA, --genome_fasta GENOME_FASTA
-                        A genome fasta file that corresponds to the liftoff gff
-```
-**Output:**
-- `liftoff-gff-name_APOLLO.gff` - A gff format annotation file
-
-#
-### `gff-phase-finder.py`
-Calculates GFF phase information for CDS which lack it. This was made for liftoff gff outputs which lack this information.
-NOTE! GFF phase is not the same as reading frame! Please see the [Sequence Ontology documentation](https://github.com/The-Sequence-Ontology/Specifications/blob/master/gff3.md)
-
-*This script is relatively slow and does not deal with instances where the start phase is not 0. I have since found a better piece of code to do this: [AGAT](https://agat.readthedocs.io/en/latest/tools/agat_sp_fix_cds_phases.html)*
-
-**Usage:**
-```
-gff-phase-finder.py [-h] -gff LIFTOFF_GFF
-
-optional arguments:
-  -h, --help            show this help message and exit
-  -gff LIFTOFF_GFF, --liftoff_gff LIFTOFF_GFF
-                        The gff without phase information (made for liftoff)
-```
-**Output:**
-
-- `your-gff-name-PHASE-CORRECTED.gff` - A gff format annotation file
-
-#
-### `gff_indexer.py`
-
-Forcefully adds a numbered index to the attributes of each row in a gff to act as a unique identifier just in case there isn't one
-
-**Usage:**
-```
-gff_indexer.py [-h] -g GFF
-
-optional arguments:
-  -h, --help         show this help message and exit
-  -g GFF, --gff GFF  The original gff for the genome that needs annotating
-```
-**Output:**
-
-- `your-gff-name_indexed.gff` - A gff format annotation file
 
 #
 ### `gff_missing_cds_finder.py`
@@ -181,37 +118,19 @@ optional arguments:
 - `your-output-name_CDS-failure-summary.png` - A bar chart of the failed CDS transfers and what is wrong with them
 
 #
-### `find-reciprocal-best-hits.py` 
-Calculate reciprocal best hits and make some nice histograms and density plots
-Based on code from [here](https://widdowquinn.github.io/2018-03-06-ibioic/02-sequence_databases/05-blast_for_rbh.html)
+### `genome-stats-calculator.sh`
+This script provides stats for genomes: 
+Number of contigs, assembly length, longest contig, N50, N90, GC%
+
+It can also optionally count gff features, but you might need to change lines 67 onwards to match the contents of your gff (e.g. "ncRNA_gene" might need to be "ncRNA")
+It does not check that the gff matches the genome, so make sure you use the right one.
+
+This was made to deal with VEuPathDB gff3 syntax
 
 **Usage:**
 ```
-find-reciprocal-best-hits.py [-h] -s1 QUERY_AA -s2 SUBJECT_AA -o OUTPUT
-
-optional arguments:
-  -h, --help    show this help message and exit
-  -s1 QUERY_AA, --query_aa QUERY_AA   
-                one set of aa sequence
-  -s2 SUBJECT_AA, --subject_aa SUBJECT_AA    
-                second set of aa sequence
-  -o OUTPUT, --output OUTPUT    
-                Name for outputs
+script genome.fasta [corresponding-gff.gff]
 ```
+
 **Output:**
-Blast results for forward and reverse reads:
-
--`outputName-fwd-results.tab`
--`outputName-rev-results.tab`
-
-Reciprocal best hits:
-
--`Cposadasi-test-rbbh.csv`
-
-- histograms of normalised bitscores for forward, reverse and reciprocal reads:
-<img src="images-for-git/Cposadasi-test_norm_bitscores_histograms.png" width="2000" />
-<img src="images-for-git/Cposadasi-test_RBH_norm_bitscores_histogram.png" width="500" />
-
-- 2D density plots of normalised bitscores for forward, reverse and reciprocal reads:
-<img src="images-for-git/Cposadasi-test_norm_bitscores_2D_density_histogram.png" width="2000" />
-<img src="images-for-git/Cposadasi-test_RBH_norm_bitscores_2D_density_histogram.png" width="500" />
+- genome-name-summary.txt

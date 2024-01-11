@@ -1,11 +1,6 @@
-from Bio import SeqIO
-from Bio import Align
 import pandas as pd
 import numpy as np
 import argparse
-import os
-from fuzzywuzzy import fuzz
-import re
 from time import time
 from venny4py.venny4py import *
 from tqdm import tqdm
@@ -123,7 +118,7 @@ def get_stats(old_gff_df, match_stats_df, name):
 @timer_func
 def main():
     parser = argparse.ArgumentParser(
-        description="examine the similarity of an old and new gff for one genome",
+        description="examine the similarity of an old and new gff for one genome and produce a list of missing CDS",
         epilog="written by Helen Davison")
     parser.add_argument('-sg', '--source_gff', \
                         help="The source gff for the genome",
