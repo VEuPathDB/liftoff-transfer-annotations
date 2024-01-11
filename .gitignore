@@ -36,5 +36,4 @@ cds-aa-to-compare/*
 3-Phelbotomus_papatasi-cds-content-check/*
 4-Coccidioides_posadasii_silveira-cds-content-check/*
 5-Anopheles_gambiae-cds-content-check/*
-bitscore-GMM.py
-gff_liftoff_error_finder.py
+images-for-git/*
