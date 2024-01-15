@@ -6,7 +6,7 @@ These scripts will run liftoff, fix the problem with missing phase information a
 2. Retrieve the liftoff with lowest flank number and the fewest missing features
 3. AGAT CDS phase fixer, [here](https://agat.readthedocs.io/en/latest/tools/agat_sp_fix_cds_phases.html)
    ```
-   agat_sp_fix_cds_frame.pl --gff infile.gff -f fasta [ -o outfile ]
+   agat_sp_fix_cds_phases.pl --gff infile.gff -f fasta [ -o outfile ]
    ``` 
 4. Extract CDS protein code for the source and lifted gff with [AGAT](https://agat.readthedocs.io/en/latest/tools/agat_sp_extract_sequences.html)
    ```
