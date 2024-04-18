@@ -194,6 +194,7 @@ def plot_and_save(df, outdir,name):
                     ['Breakdown of failures', failurepng],
                     ['ncRNA and pseudogenes transfers', summarypng2]],
                     headers=['', 'File name']))
+    print(os.path.join(outdir, csvname))
     df.to_csv(os.path.join(outdir, csvname),header=True, index=None)
     # plot overall valid CDS transfers and protein matches
     hue_order=[True, False]

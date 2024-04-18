@@ -17,6 +17,28 @@ These scripts will run liftoff, fix the problem with missing phase information a
 
 ## The scripts
 
+You can run everything at once with `run-transfer-annotations.sh`
+
+## The scripts
+
+### `run-transfer-annotations`
+For this to work:
+1. change "~/scripts/" infront of each of the python script lines (30, 64, and 67) to the path they are stored on your machine
+2. install AGAT in a new environment called agatenv (or change the name in the script if you already have agat)
+3. be in an environment with liftoff installed
+
+**Usage:**
+```
+bash run-transfer-annotations.sh SOURCE_GFF.gff SOURCE_GENOME.fasta NEW_GENOME.fasta prefix
+
+Arguments:
+   SOURCE_GFF.gff - gff from original genome to be transferred
+   SOURCE_GENOME.fasta - genome fasta associated with the source gff
+   NEW_GENOME.fasta - the genome fasta that wat you want to lift the gff to
+   prefix - a prefix for protein identity check output files
+```
+
+#
 ### `run-liftoff.sh`
 
 Run one instance of liftoff with default parameters and `-polish`. Add it to a loop and run it as many times as you want.

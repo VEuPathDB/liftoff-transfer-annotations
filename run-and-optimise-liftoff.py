@@ -77,18 +77,21 @@ def plot_stats(df, old_name, new_name, best_distance):
     plt.tight_layout()
     plt.savefig(old_name+"-to-"+new_name+"-UNMAPPED-FEATURE-COUNTS.png")
 
-def clean_up(old_name, new_name, best_distance, best_flank):
-    os.system("mkdir intermediate-files-{}-to-{}"
-              .format(str(old_name),str(new_name)))
+def clean_up(df):
+    best = df.loc[(df['Unmapped Features'] == df['Unmapped Features'].min())]
+    best = best.loc[best['Flank']==best['Flank'].min()]
     flanks = [0.0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0]
-    flanks.remove(best_flank)
-    files=[]
+    flanks.remove(best['Flank'].item())
+    paths=[]
     for flank in flanks:
-        files += glob(old_name+"_d"+str(best_distance)+"_f"+str(flank)+"*")
-        files += glob(new_name+"_d"+str(best_distance)+"_f"+str(flank)+"*")
-    for f in files:
-        os.system("mv {} intermediate-files-{}-to-{}/{}"
-                  .format(str(f), str(old_name),str(new_name), str(f)))
+        paths.append([Path(p) for p in  glob("*_f"+str(flank)+"*")])
+    paths = [item for sublist in paths for item in sublist]
+    for file in paths:
+        if os.path.isfile(file):
+            os.remove(file)
+        else:
+            # If it fails, inform the user.
+            print("Error: %s file not found" % file)
 
 
 def optimise_liftoff(old_gff, old_genome, new_genome, new_name, old_name, plot):
@@ -150,7 +153,7 @@ def optimise_liftoff(old_gff, old_genome, new_genome, new_name, old_name, plot):
     
     #clean_up(old_name, new_name, best_distance, best_flank)
 
-    return 
+    return df
 
 
 def main():
@@ -235,5 +238,7 @@ optimise your parameters.
         print("Your gff file is not in the current directory")
 
     optimise_liftoff(old_gff, old_genome, new_genome, new_name, old_name, plot)
+    df = pd.read_csv(glob("*UNMAPPED-FEATURE-COUNTS.csv"))
+    clean_up(df)
 
 main()
