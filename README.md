@@ -15,7 +15,6 @@ These scripts will run liftoff, fix the problem with missing phase information a
 6. Run `gff_missing_cds_finder.py`
 7. Run `gff_protein_change_finder.py`
 
-## The scripts
 
 You can run everything at once with `run-transfer-annotations.sh`
 
