@@ -146,13 +146,9 @@ def add_attribute_to_gff(lifted_gff_df, transcript_changes_df, lifted_gff, name,
     merged = lifted_gff_df.merge(transcript_changes_df[['transcript_ID','has_missing_cds','has_internal_stops','valid_transfer','proteins_match_source']], left_on='ID', right_on='transcript_ID', how='left')
     # attributes to keep
     # remove ebi biotypes from all rows
-    merged = merged[[0,1,2,3,4,5,6,7,8,'ID','description','Parent','Note','gene_id', 
-                     'protein_source_id','Name','has_missing_cds',
-                     'has_internal_stops','valid_transfer','proteins_match_source']]
+    merged = merged.drop('ebi_biotype', axis=1)
     merged.fillna(value=np.nan, inplace=True)
-    attribute_names = ['ID','description','Parent','Note','gene_id', 
-                     'protein_source_id','Name','has_missing_cds',
-                     'has_internal_stops','valid_transfer','proteins_match_source']
+    attribute_names = list(merged.columns[9:])
     new_attributes = []
     for index, row in tqdm(merged.iterrows(),total=len(merged)):
         attr = ''
