@@ -24,7 +24,9 @@ You can run everything at once with `run-transfer-annotations.sh`
 ### `run-transfer-annotations`
 For this to work:
 1. change "~/scripts/" infront of each of the python script lines (30, 64, and 67) to the path they are stored on your machine
-2. install AGAT in a new environment called agatenv (or change the name in the script if you already have agat)
+2. install [AGAT](https://github.com/NBISweden/AGAT/tree/master#installation) in a new environment called agatenv (or change the name in the script if you already have AGAT)
+    - Installing AGAT takes way too long if you try to install it via bioconda or the yaml file (but you're welcome to try). I recommend installing all the required packages manually via conda three or four at a time.
+    - A package list can be found [here](https://github.com/NBISweden/AGAT/tree/master?tab=readme-ov-file#old-school---manually)
 3. be in an environment with liftoff installed
 
 **Usage:**
