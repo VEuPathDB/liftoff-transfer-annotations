@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 import argparse
 from time import time
-from venny4py.venny4py import *
+from tabulate import tabulate
 from tqdm import tqdm
 tqdm.pandas()
   
@@ -42,78 +42,64 @@ def read_in_gff(gff):
     print("\033[33m {}\033[0;0m".format("\n Making attributes dataframe..."))
     df[9]=attr_dicts
     df = pd.concat([df.drop([9], axis=1), df[9].apply(pd.Series)], axis=1)
-    df = df[[0,1,2,3,4,5,6,7,8,'ID','Parent','gene_id']]
-    print("\033[33m {}\033[0;0m".format('Calculating CDS numbers...'))
-    df['CDS_number'] = pd.to_numeric(df['ID'].str.split('-CDS', expand=True)[1])
-    df = df.fillna(value=np.nan)
+    if 'gene_id' in df.columns:
+        df = df[[0,1,2,3,4,5,6,7,8,'ID','Parent','gene_id']]
+    elif 'owner' in df.columns:
+        df = df[[0,1,2,3,4,5,6,7,8,'ID','Parent','Name']]
+        gff_type = 'Apollo'
     print("\033[33m {}\033[0;0m".format("Done!"))
-    return df
+    return df,gff_type
 
-@timer_func
-def get_matching_ids(old_gff_df,new_gff_df):
-    # get a list of matching IDs
-    old_cds = set(old_gff_df.loc[old_gff_df[2]=='CDS', 'ID'])
-    new_cds = set(new_gff_df.loc[new_gff_df[2]=='CDS', 'ID'])
-    print("\033[32m {}\033[0;0m".format("Finding matching gene CDS exon IDs."))
-    matching = list(old_cds.intersection(new_cds))
-    absent = list(old_cds.symmetric_difference(new_cds))
-    print("\033[33m {}\033[0;0m".format("Done!"))
-    return matching, absent
 
-def get_matching_genes(matching, new_gff_df, name):
-    # make the dataframe
-    match_stats_df = pd.DataFrame(columns=["ID"])
-    print("\033[33m {}\032[0;0m".format("Cross referencing IDs..."))
-    match_stats_df['ID'] = matching
-    # nucleotide sequences are stored as biopython Seq class objects
-    match_stats_df = match_stats_df.merge(new_gff_df.loc[new_gff_df[2]=='CDS',['ID','Parent','gene_id','CDS_number']], how='left', on = 'ID').sort_values(by='ID')
-    match_stats_df.to_csv(str(name)+"-all-CDS-ids.csv", sep=',',index=None, na_rep=np.NaN)
-    print("\033[33m {}\033[0;0m".format("Done! Saved as "+str(name)+"-STATS.csv"))
-    return match_stats_df
-
-def find_missing_middle(match_stats_df):
-    missing_middle = []
-    def checkConsecutive(l):
-        return sorted(l) == list(range(min(l), max(l)+1))
-    def find_missing(lst):
-        return sorted(set(range(lst[0], lst[-1])) - set(lst))
-    transcripts = list(match_stats_df['Parent'].unique())
-    for item in tqdm(transcripts,total=len(transcripts)):
-        numbers = list(map(int, match_stats_df.loc[match_stats_df['Parent']==item, 'CDS_number']))
-        if checkConsecutive(numbers) == False:
-            missing_middle.append(item)
+def find_missing_cds(old_gff_df, new_gff_df, name):
+    print("\033[33m {}\033[0;0m".format("Cross referencing IDs and finding missing CDS..."))
+    # get locations
+    old_cds = old_gff_df.loc[old_gff_df[2]=='CDS', [3,4 ,'ID', 'Parent']].sort_values([3,4,'Parent','ID']).reset_index().drop(columns='index')
+    new_cds = new_gff_df.loc[new_gff_df[2]=='CDS', [3,4 ,'ID','Parent']].sort_values([3,4,'Parent','ID']).reset_index().drop(columns='index')
+    # find and label mismatching rows, then sort so coordinates are in series
+    matching = old_cds.merge(new_cds,on=[3,4 ,'ID', 'Parent'], how='left',indicator='Exist').sort_values(['ID','Parent',3,4])
+    matching['Exist'] = np.where(matching.Exist == 'both', True, False)
+    # find missing start, middle, and end:
+    parents_with_missing = matching.loc[matching['Exist']==False,'Parent'].unique()
+    if len(parents_with_missing) == 0:
+        matching['status']='present'
+    else:
+        for i in parents_with_missing:
+            n_cds = range(0, len(matching.loc[matching['Parent']==i]))
+            status = []
+            if matching.loc[matching['Parent']==i,'Exist'].eq(False).all():
+                status=['missing_all_cds']*(len(n_cds))
+            else:
+                if matching.loc[matching['Parent']==i].iloc[0,4] == False:
+                    status.append('missing_start')
+                else:
+                    status.append('present')
+                for n in matching.loc[matching['Parent']==i].iloc[1:n_cds[-1],4]:
+                    if n == False:
+                        status.append('missing_middle')
+                    else:
+                        status.append('present')
+                if matching.loc[matching['Parent']==i].iloc[-1,4] == False:
+                    status.append('missing_end') 
+                else:
+                    status.append('present')
+            # add status to matching dataframe
+            matching.loc[matching['Parent']==i,'status'] = status
+    matching['status'] = matching['status'].fillna('present')
+    matching = matching.rename(columns={3:'start',4:'end'})
+    matching.to_csv(name+'-CDS-status.csv', index=None, header=True)
+    
+    summary = pd.DataFrame({'status':['present','missing_all_cds','missing_start','missing_middle','missing_end','total_cds']}).set_index('status')
+    summary = summary.join(matching.groupby('status',as_index=False)
+                 .count()[['status','Exist']]
+                 .set_index('status'), on='status',how='outer').fillna(0).astype('int')
+    summary.loc['total_cds'] = summary.Exist.sum()
+    print("\033[97;46m {}\033[0;0m".format("CDS status summary: "))
     print()
-    return missing_middle
-
-def find_missing_end(match_stats_df, old_gff_df):
-    old_max_cds = old_gff_df.loc[(old_gff_df[2]=="CDS"), ["Parent","ID","CDS_number"]].groupby('Parent').max()[['ID','CDS_number']].reset_index()
-    match_stats_max = match_stats_df.groupby('Parent').max()['CDS_number'].reset_index()
-    merged_df = old_max_cds.merge(match_stats_max, on='Parent', how='outer').fillna(np.NaN).dropna()
-    missing_end = list(merged_df.loc[merged_df['CDS_number_x'] != merged_df['CDS_number_y']].dropna()['Parent'])
-    return missing_end
-
-def get_stats(old_gff_df, match_stats_df, name):
-    ## finding differences
-    first = (match_stats_df.sort_values(['Parent','gene_id','CDS_number']).groupby('Parent').first()['CDS_number'] != 1).reset_index()
-    print("\033[32m {}\033[0;0m".format("Finding missing start cds"))
-    missing_start = set(list(first.loc[first['CDS_number']==True, 'Parent']))
-    print("\033[32m {}\033[0;0m".format('Finding missing middle cds'))
-    missing_middle = set(list(find_missing_middle(match_stats_df)))
-    print("\033[32m {}\033[0;0m".format("Finding missing end cds"))
-    missing_end = set(find_missing_end(match_stats_df, old_gff_df))
-    # make a venn diagram
-    a = pd.DataFrame(list(missing_start), columns=['missing_start'])
-    b = pd.DataFrame(list(missing_middle), columns=['missing_middle'])
-    c = pd.DataFrame(list(missing_end), columns=['missing_end'])
-    differences = a.join(b, how='outer').join(c, how='outer')
-    differences.to_csv(name+'-missing-cds-list.csv', index=None, header=True)
-    # summary to print to the console
+    print(tabulate(summary,headers=['Status', 'Count']))
     print()
-    print("\033[32m {}\033[0;0m".format("Summary of differences between gffs:"))
-    print(str(len(missing_start))+ " out of "+str(len(match_stats_df['Parent'].unique())) + " transcripts have a missing start codon")
-    print(str(len(missing_middle))+" out of "+str(len(match_stats_df['Parent'].unique())) + " transcripts have a missing middle codon")
-    print(str(len(missing_end))+" out of "+str(len(match_stats_df['Parent'].unique())) + " transcripts have a missing end codon")
-    return differences
+    return matching
+
 
 @timer_func
 def main():
@@ -150,17 +136,14 @@ def main():
         with open(new_gff, "r") as f:
             if "#" not in str(f.readline()):
                 raise Exception("No header lines found, check that your new gff file is definitely a gff")
-        gff_id = [line for line in open(new_gff) if line[:1] != '#'][0].split()[0]
     except FileNotFoundError:
         print("New gff is not in the current directory")
 
     # RUN FUNCTIONS
-    old_gff_df = read_in_gff(old_gff)
-    new_gff_df = read_in_gff(new_gff)
-    matching, absent = get_matching_ids(old_gff_df,new_gff_df)
-    match_stats_df = get_matching_genes(matching, new_gff_df, name)
-    print(str(len(absent))+ " ids out of a total of "+str(len(matching)+len(absent)) + " did not have a match in the new gff.")
-    get_stats(old_gff_df, match_stats_df, name)
+    old_gff_df, old_gff_type = read_in_gff(old_gff)
+    new_gff_df, new_gff_type = read_in_gff(new_gff)
+    find_missing_cds(old_gff_df, new_gff_df, name)
+        
     return
 
 main()

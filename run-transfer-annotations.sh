@@ -55,13 +55,13 @@ conda deactivate
 
 # get missing cds
 liftedgff=$(ls *-AGAT-phase-fixed.gff)
-outname=$(basename -s .gff ${lifted_gff})
+outname=$(basename -s .gff $liftedgff)
 missingcds=${outname}-missing-CDS-list.csv
 liftedaa=$(ls *-LIFTED-cds-aa.faa)
 sourceaa=$(ls *-SOURCE-cds-aa.faa)
 name=${4}
 
-python ~/scripts/gff_missing_cds_finder.py --source_gff ${1} --lifted_gff ${lifted_gff} -o ${missingcds}
+python ~/scripts/gff_missing_cds_finder.py --source_gff ${1} --lifted_gff ${liftedgff} -o ${outname}
 
 # run the protein change finder
 python ~/scripts/gff_protein_change_finder.py -lcds ${liftedaa} -scds ${sourceaa} -nf ${3} -sf ${2} -lg ${liftedgff} -sg ${1} -m ${missingcds} -o ${name}

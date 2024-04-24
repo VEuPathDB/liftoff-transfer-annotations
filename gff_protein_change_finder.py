@@ -61,8 +61,8 @@ def check_valid_CDS_transfer(source_cds_aa,lifted_cds_aa,missing_cds):
                                 'percent_similarity_levenshtein','valid_transfer','proteins_match_source'])
     df['transcript_ID'] = source_record_dict.keys()
     df['type'] = 'CDS'
-    print("\033[32m {}\033[0;0m".format("Getting CDS sequences and alignment scores"))
-    for record in tqdm(source_record_dict, total=len(source_record_dict)):
+    print("\033[32m {}\033[0;0m".format("Getting CDS sequences and alignment scores..."))
+    for record in source_record_dict:
         df.loc[df['transcript_ID']==record,'source_aa'] = str(source_record_dict[record].seq)
         if record in lifted_record_dict.keys():
             df.loc[df['transcript_ID']==record,'lifted_aa'] = str(lifted_record_dict[record].seq)
@@ -70,7 +70,7 @@ def check_valid_CDS_transfer(source_cds_aa,lifted_cds_aa,missing_cds):
             # levenshtein similarity score
             df.loc[df['transcript_ID']==record,'percent_similarity_levenshtein'] = fuzz.ratio(source_record_dict[record].seq,lifted_record_dict[record].seq)
             # check if transcript has any CDS are missing
-            if (record in list(missing_cds_df['missing_start'])) or (record in list(missing_cds_df['missing_middle'])) or (record in list(missing_cds_df['missing_end'])):
+            if missing_cds_df.loc[missing_cds_df['Parent']==record, 'Exist'].eq(False).any():
                 df.loc[df['transcript_ID']==record, 'has_missing_cds'] = True
             else:
                 df.loc[df['transcript_ID']==record, 'has_missing_cds'] = False
@@ -79,9 +79,8 @@ def check_valid_CDS_transfer(source_cds_aa,lifted_cds_aa,missing_cds):
         # check start codon and end codon in lifted aa
         df['has_start'] = df['lifted_aa'].str[0] == 'M'
         df['has_end'] = df['lifted_aa'].str[-1] == '*'
-    print()
-    print("\033[32m {}\033[0;0m".format("Marking valid transfers and protein matches"))
-    for index, row in tqdm(df[~df['lifted_aa'].isna()].iterrows(), total = len(df[~df['lifted_aa'].isna()])):
+    print("\033[32m {}\033[0;0m".format("Marking valid transfers and protein matches..."))
+    for index, row in df[~df['lifted_aa'].isna()].iterrows():
         if (row['internal_stop_codons']!=0) or \
                 (row['has_missing_cds']==True):
             df.loc[df['transcript_ID']==row['transcript_ID'], 'valid_transfer'] = False
@@ -116,6 +115,7 @@ def check_ncRNA_and_pseudogene(source_fasta, new_fasta, source_gff, lifted_gff):
     source_ncRNA_pseudo_IDs = get_transcript_IDs(source_gff_df)
     tr_df['transcript_ID'] = source_ncRNA_pseudo_IDs
     # get the sequence information for lifted transcripts
+    print()
     print("\033[32m {}\033[0;0m".format("Getting sequence information for lifted transcripts"))
     for index, record in tqdm(lifted_gff_df.loc[lifted_gff_df['ID'].isin(lifted_ncRNA_pseudo_IDs)].iterrows(),
                               total=len(lifted_gff_df.loc[lifted_gff_df['ID'].isin(lifted_ncRNA_pseudo_IDs)])):
@@ -126,6 +126,7 @@ def check_ncRNA_and_pseudogene(source_fasta, new_fasta, source_gff, lifted_gff):
         tr_df.loc[tr_df['transcript_ID']==record['ID'], 'lifted_seq'] = str(sequence)
         tr_df.loc[tr_df['transcript_ID']==record['ID'], 'type'] = str(seq_type)
     # get the sequence information for source transcripts
+    print()
     print("\033[32m {}\033[0;0m".format("Getting sequence information for source transcripts"))
     for index, record in tqdm(source_gff_df.loc[source_gff_df['ID'].isin(source_ncRNA_pseudo_IDs)].iterrows(),
                               total=len(source_gff_df.loc[source_gff_df['ID'].isin(source_ncRNA_pseudo_IDs)])):
@@ -146,7 +147,8 @@ def add_attribute_to_gff(lifted_gff_df, transcript_changes_df, lifted_gff, name,
     merged = lifted_gff_df.merge(transcript_changes_df[['transcript_ID','has_missing_cds','has_internal_stops','valid_transfer','proteins_match_source']], left_on='ID', right_on='transcript_ID', how='left')
     # attributes to keep
     # remove ebi biotypes from all rows
-    merged = merged.drop('ebi_biotype', axis=1)
+    if 'ebi_biotype' in merged.keys():
+        merged = merged.drop('ebi_biotype', axis=1)
     merged.fillna(value=np.nan, inplace=True)
     attribute_names = list(merged.columns[9:])
     new_attributes = []
@@ -194,34 +196,38 @@ def plot_and_save(df, outdir,name):
     df.to_csv(os.path.join(outdir, csvname),header=True, index=None)
     # plot overall valid CDS transfers and protein matches
     hue_order=[True, False]
-    fig, ax = plt.subplots(figsize=(6,5))
+    fig, ax = plt.subplots(figsize=(7,5))
     sns.countplot(df[df['type']=='CDS'], x='valid_transfer', hue='proteins_match_source',
                   hue_order=hue_order, order=[True,False], palette='bone')
     plt.title('CDS transfer rates')
     plt.xlabel('Valid transfer')
     plt.ylabel('Count')
-    plt.legend(title='Proteins match')
+    plt.legend(title='Proteins match', loc='center left', bbox_to_anchor=(1, 0.5))
+    plt.tight_layout()
     plt.savefig(os.path.join(outdir, summarypng),dpi=150)
     # plot a breakdown of invalid CDS transfers
-    fig, ax = plt.subplots(figsize=(6,5))
-    sns.countplot(df.loc[(df['valid_transfer']==False)&(df['type']=='CDS')][['has_missing_cds','has_internal_stops','proteins_match_source']].melt()\
-                  .replace({'has_missing_cds':'Has missing cds','has_internal_stops':'Has internal stops','proteins_match_source':'Proteins match source'}),\
-                   hue='value', hue_order=hue_order, x='variable', palette='bone')
-    plt.title('CDS transfer failure breakdown for '+str(len(df.loc[(df['valid_transfer']==False)&(df['type']=='CDS')]))+' failures')
-    plt.ylabel('Count')
-    plt.xlabel('Failure type')
-    plt.legend(title='Value')
-    plt.savefig(os.path.join(outdir, failurepng),dpi=150)
+    if df['valid_transfer'].eq(False).any():
+        fig, ax = plt.subplots(figsize=(7,5))
+        sns.countplot(df.loc[(df['valid_transfer']==False)&(df['type']=='CDS')][['has_missing_cds','has_internal_stops','proteins_match_source']].melt()\
+                      .replace({'has_missing_cds':'Has missing cds','has_internal_stops':'Has internal stops','proteins_match_source':'Proteins match source'}),\
+                       hue='value', hue_order=hue_order, x='variable', palette='bone')
+        plt.title('CDS transfer failure breakdown for '+str(len(df.loc[(df['valid_transfer']==False)&(df['type']=='CDS')]))+' failures')
+        plt.ylabel('Count')
+        plt.xlabel('Failure type')
+        plt.legend(title='Value', loc='center left', bbox_to_anchor=(1, 0.5))
+        plt.tight_layout()
+        plt.savefig(os.path.join(outdir, failurepng),dpi=150)
     # plot valid transfers for ncRNA and pseudogenes
-    fig, ax = plt.subplots(figsize=(6,6))
-    sns.countplot(df[df['type']!='CDS'], x='type', hue='valid_transfer', hue_order=hue_order, palette='bone')
-    ax.set_xticklabels(ax.get_xticklabels(), rotation=90)
-    plt.title('ncRNA and pseudogene transfer rates')
-    plt.xlabel('Type')
-    plt.ylabel('Count')
-    plt.legend(title='Valid transfer')
-    plt.tight_layout()
-    plt.savefig(os.path.join(outdir, summarypng2),dpi=150)
+    if len(df[df['type']!='CDS'])!= 0:
+        fig, ax = plt.subplots(figsize=(7,6))
+        sns.countplot(df[df['type']!='CDS'], x='type', hue='valid_transfer', hue_order=hue_order, palette='bone')
+        ax.set_xticklabels(ax.get_xticklabels(), rotation=90)
+        plt.title('ncRNA and pseudogene transfer rates')
+        plt.xlabel('Type')
+        plt.ylabel('Count')
+        plt.legend(title='Valid transfer', loc='center left', bbox_to_anchor=(1, 0.5))
+        plt.tight_layout()
+        plt.savefig(os.path.join(outdir, summarypng2),dpi=150)
     return
 
 def main():
