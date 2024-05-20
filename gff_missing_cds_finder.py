@@ -54,10 +54,10 @@ def read_in_gff(gff):
 def find_missing_cds(old_gff_df, new_gff_df, name):
     print("\033[33m {}\033[0;0m".format("Cross referencing IDs and finding missing CDS..."))
     # get locations
-    old_cds = old_gff_df.loc[old_gff_df[2]=='CDS', [3,4 ,'ID', 'Parent']].sort_values([3,4,'Parent','ID']).reset_index().drop(columns='index')
-    new_cds = new_gff_df.loc[new_gff_df[2]=='CDS', [3,4 ,'ID','Parent']].sort_values([3,4,'Parent','ID']).reset_index().drop(columns='index')
+    old_cds = old_gff_df.loc[old_gff_df[2]=='CDS', ['ID', 'Parent']].sort_values(['Parent','ID']).reset_index().drop(columns='index')
+    new_cds = new_gff_df.loc[new_gff_df[2]=='CDS', ['ID','Parent']].sort_values(['Parent','ID']).reset_index().drop(columns='index')
     # find and label mismatching rows, then sort so coordinates are in series
-    matching = old_cds.merge(new_cds,on=[3,4 ,'ID', 'Parent'], how='left',indicator='Exist').sort_values(['ID','Parent',3,4])
+    matching = old_cds.merge(new_cds,on=['ID', 'Parent'], how='left',indicator='Exist')
     matching['Exist'] = np.where(matching.Exist == 'both', True, False)
     # find missing start, middle, and end:
     parents_with_missing = matching.loc[matching['Exist']==False,'Parent'].unique()

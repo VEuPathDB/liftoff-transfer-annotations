@@ -218,13 +218,13 @@ optimise your parameters.
     except FileNotFoundError:
         print("New genome fasta is not in the current directory")
 
-    try:
-        with open(old_gff, "r") as f:
-            if "#" not in f.readline:
-                raise Exception("No header lines found, check that your file is definitely a gff")
-        gff_id = [line for line in open(old_gff) if line[:1] != '#'][0].split()[0]
-    except FileNotFoundError:
-        print("New genome fasta is not in the current directory")
+    #try:
+    #    with open(old_gff, "r") as f:
+    #        if "#" not in f.readline:
+    #            raise Exception("No header lines found, check that your file is definitely a gff")
+    #    gff_id = [line for line in open(old_gff) if line[:1] != '#'][0].split()[0]
+    #except FileNotFoundError:
+    #    print("New genome fasta is not in the current directory")
 
     try:
         gff_id = [line for line in open(old_gff) if line[:1] != '#'][0].split()[0]
