@@ -31,7 +31,7 @@ target_name=$(basename $3 | rev | cut -d "." -f2- | rev)
 reference_name=$(basename $1 |  rev | cut -d "." -f2- | rev)
 
 if ! test -f ./${target_name}*lifted_annotations.gff3_polished; then
-  python ~/scripts/run-and-optimise-liftoff.py -gff ${1} -old ${2} -new ${3}
+  python ~/scripts/liftoff-transfer-annotations/run-and-optimise-liftoff.py -gff ${1} -old ${2} -new ${3}
 fi
 
 if test -f ./${target_name}*lifted_annotations.gff3_polished; then
@@ -40,7 +40,7 @@ if test -f ./${target_name}*lifted_annotations.gff3_polished; then
     echo "Continuing with other quality checks for this transfer"
   fi
   if ! test -f ./${reference_name}_features; then
-    python ~/scripts/run-and-optimise-liftoff.py -gff ${1} -old ${2} -new ${3}
+    python ~/scripts/liftoff-transfer-annotations//run-and-optimise-liftoff.py -gff ${1} -old ${2} -new ${3}
   fi
 fi
 
