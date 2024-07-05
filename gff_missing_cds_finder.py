@@ -46,9 +46,9 @@ def read_in_gff(gff):
         df = df[[0,1,2,3,4,5,6,7,8,'ID','Parent','gene_id']]
     elif 'owner' in df.columns:
         df = df[[0,1,2,3,4,5,6,7,8,'ID','Parent','Name']]
-        gff_type = 'Apollo'
+        # gff_type = 'Apollo'
     print("\033[33m {}\033[0;0m".format("Done!"))
-    return df,gff_type
+    return df
 
 
 def find_missing_cds(old_gff_df, new_gff_df, name):
@@ -140,8 +140,8 @@ def main():
         print("New gff is not in the current directory")
 
     # RUN FUNCTIONS
-    old_gff_df, old_gff_type = read_in_gff(old_gff)
-    new_gff_df, new_gff_type = read_in_gff(new_gff)
+    old_gff_df = read_in_gff(old_gff)
+    new_gff_df = read_in_gff(new_gff)
     find_missing_cds(old_gff_df, new_gff_df, name)
         
     return

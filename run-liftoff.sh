@@ -5,7 +5,7 @@ target_genome=$1
 reference_genome=$2
 gff=$3
 target_name=$(basename $target_genome | rev | cut -d "." -f2- | rev)
-reference_name=$(basename $reference_genome |  rev | cut -d "." -f2- | rev)
+reference_name=$(basename $gff |  rev | cut -d "." -f2- | rev)
 
 ## ERRORS
 

@@ -191,7 +191,7 @@ optimise your parameters.
     plot = args.plot
 
     new_name = Path(new_genome).stem
-    old_name = Path(old_genome).stem
+    old_name = Path(old_gff).stem
 
 
     try:

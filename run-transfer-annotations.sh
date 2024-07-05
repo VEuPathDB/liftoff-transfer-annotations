@@ -27,7 +27,22 @@ tput setaf 6; echo "------Transfering ${1} to ${3}------"; tput sgr0
 source ~/miniconda3/etc/profile.d/conda.sh
 
 # run and optimise liftoff
-python ~/scripts/run-and-optimise-liftoff.py -gff ${1} -old ${2} -new ${3}
+target_name=$(basename $3 | rev | cut -d "." -f2- | rev)
+reference_name=$(basename $1 |  rev | cut -d "." -f2- | rev)
+
+if ! test -f ./${target_name}*lifted_annotations.gff3_polished; then
+  python ~/scripts/run-and-optimise-liftoff.py -gff ${1} -old ${2} -new ${3}
+fi
+
+if test -f ./${target_name}*lifted_annotations.gff3_polished; then
+  if test -f ./${reference_name}_features; then
+    echo "Liftoff already completed for target genome and source gff"
+    echo "Continuing with other quality checks for this transfer"
+  fi
+  if ! test -f ./${reference_name}_features; then
+    python ~/scripts/run-and-optimise-liftoff.py -gff ${1} -old ${2} -new ${3}
+  fi
+fi
 
 tput setaf 2; echo "------Transfer step complete------"; tput sgr0
 echo ""
